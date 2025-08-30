@@ -16,6 +16,8 @@ Pod::Spec.new do |s|
   s.source_files = "ios/**/*.{h,m,mm,swift}"
   s.swift_version = "5.0"
 
+  # Google Sign-In dependency
+  s.dependency "GoogleSignIn", "~> 7.0"
 
   install_modules_dependencies(s)
 end

@@ -74,4 +74,17 @@ def kotlin_version = getExtOrDefault("kotlinVersion")
 dependencies {
   implementation "com.facebook.react:react-android"
   implementation "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
+  
+  // Credential Manager for Google Sign-In
+  implementation "androidx.credentials:credentials:1.2.2"
+  implementation "androidx.credentials:credentials-play-services-auth:1.2.2"
+  
+  // Google Identity Services
+  implementation "com.google.android.libraries.identity.googleid:googleid:1.1.0"
+  
+  // Google Play Services (for compatibility checks)
+  implementation "com.google.android.gms:play-services-base:18.2.0"
+  
+  // Coroutines for async operations
+  implementation "org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3"
 }
