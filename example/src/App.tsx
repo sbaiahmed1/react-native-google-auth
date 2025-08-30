@@ -215,10 +215,11 @@ export default function App() {
                 <View style={styles.tokenInfo}>
                   <Text style={styles.sectionTitle}>Tokens:</Text>
                   <Text style={styles.tokenText}>
-                    Access Token: {tokens.accessToken.substring(0, 20)}...
+                    Access Token:{' '}
+                    {tokens.accessToken?.substring(0, 20) || 'N/A'}...
                   </Text>
                   <Text style={styles.tokenText}>
-                    ID Token: {tokens.idToken.substring(0, 20)}...
+                    ID Token: {tokens.idToken?.substring(0, 20) || 'N/A'}...
                   </Text>
                 </View>
               )}
