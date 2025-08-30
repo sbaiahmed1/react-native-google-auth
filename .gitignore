@@ -84,3 +84,9 @@ android/generated
 
 # React Native Nitro Modules
 nitrogen/
+
+
+# IDE
+.idea/
+.vscode/
+.trae/
