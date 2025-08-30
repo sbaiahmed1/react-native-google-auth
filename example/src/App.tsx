@@ -68,35 +68,6 @@ export default function App() {
     }
   };
 
-  const handleCreateAccount = async () => {
-    if (loading) return;
-    setLoading(true);
-    try {
-      const result = await GoogleAuth.createAccount();
-      console.log('Create Account Result:', result);
-
-      if (result.type === 'success') {
-        setUser(result.data.user);
-        Alert.alert(
-          'Account Created',
-          `Welcome ${result.data.user.name}! Your account has been created.`
-        );
-      } else if (result.type === 'cancelled') {
-        Alert.alert(
-          'Account Creation Cancelled',
-          'User cancelled the account creation process'
-        );
-      } else {
-        Alert.alert('Account Creation Failed', 'Failed to create account');
-      }
-    } catch (error) {
-      console.log('Create Account Error:', error);
-      Alert.alert('Create Account Error', `Failed to create account: ${error}`);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const handleSignOut = async () => {
     if (loading) return;
     setLoading(true);
@@ -164,7 +135,6 @@ export default function App() {
   return (
     <ScrollView contentContainerStyle={styles.container}>
       <Text style={styles.title}>Google Auth Example</Text>
-
       {!isConfigured ? (
         <Text style={styles.status}>Configuring Google Auth...</Text>
       ) : (
@@ -174,7 +144,6 @@ export default function App() {
               <Text style={styles.welcomeText}>Welcome, {user.name}!</Text>
               <Text style={styles.emailText}>{user.email}</Text>
               <Text style={styles.userIdText}>ID: {user.id}</Text>
-
               <View style={styles.buttonContainer}>
                 <TouchableOpacity
                   style={[styles.button, loading && styles.buttonDisabled]}
@@ -183,7 +152,6 @@ export default function App() {
                 >
                   <Text style={styles.buttonText}>Get Tokens</Text>
                 </TouchableOpacity>
-
                 {Platform.OS === 'android' && (
                   <TouchableOpacity
                     style={[
@@ -249,21 +217,6 @@ export default function App() {
                   {loading ? 'Signing In...' : 'Sign In with Google'}
                 </Text>
               </TouchableOpacity>
-
-              <TouchableOpacity
-                style={[
-                  styles.button,
-                  styles.secondaryButton,
-                  loading && styles.buttonDisabled,
-                ]}
-                onPress={handleCreateAccount}
-                disabled={loading}
-              >
-                <Text style={styles.buttonText}>
-                  {loading ? 'Creating Account...' : 'Create Google Account'}
-                </Text>
-              </TouchableOpacity>
-
               {Platform.OS === 'android' && (
                 <TouchableOpacity
                   style={[

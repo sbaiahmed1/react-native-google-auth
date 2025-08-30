@@ -61,7 +61,6 @@ export interface Spec extends TurboModule {
 
   // Sign-in methods
   signIn(): Promise<OneTapResponse>;
-  createAccount(): Promise<OneTapResponse>;
 
   // Sign-out
   signOut(): Promise<void>;

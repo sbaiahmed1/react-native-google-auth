@@ -18,23 +18,20 @@ yarn add react-native-google-auth
 
 ### iOS Setup
 
-1. Add GoogleSignIn to your `ios/Podfile`:
-   ```ruby
-   pod 'GoogleSignIn'
-   ```
-
-2. Install pods:
+1. Install pods:
    ```bash
    cd ios && pod install
    ```
+   
+   *Note: The GoogleSignIn dependency is automatically included via the library's podspec.*
 
-3. Add your iOS client ID to `ios/Info.plist`:
+2. Add your iOS client ID to `ios/Info.plist`:
    ```xml
    <key>GIDClientID</key>
    <string>YOUR_IOS_CLIENT_ID</string>
    ```
 
-4. Add URL schemes to `ios/Info.plist` (replace with your actual iOS client ID):
+3. Add URL schemes to `ios/Info.plist` (replace with your actual iOS client ID):
    ```xml
    <key>CFBundleURLTypes</key>
    <array>
@@ -51,7 +48,7 @@ yarn add react-native-google-auth
    
    **Note:** Remove `.apps.googleusercontent.com` from your iOS client ID when adding it to URL schemes.
 
-5. Configure URL handling in your `AppDelegate.swift`:
+4. Configure URL handling in your `AppDelegate.swift`:
    ```swift
    import GoogleSignIn
    
@@ -67,20 +64,9 @@ yarn add react-native-google-auth
 
 ### Android Setup
 
-1. Add dependencies to `android/app/build.gradle`:
-   ```gradle
-   dependencies {
-       implementation 'androidx.credentials:credentials:1.2.2'
-       implementation 'androidx.credentials:credentials-play-services-auth:1.2.2'
-       implementation 'com.google.android.libraries.identity.googleid:googleid:1.1.0'
-   }
-   ```
+No additional setup required! The library automatically includes all necessary dependencies through Gradle.
 
-2. Download `google-services.json` from Firebase Console and place it in `android/app/`:
-   - Go to [Firebase Console](https://console.firebase.google.com/)
-   - Select your project or create a new one
-   - Add your Android app with your package name
-   - Download `google-services.json` and place it in `android/app/google-services.json`
+*Note: Google Play Services and Credential Manager dependencies are automatically configured.*
 
 ## Getting Client IDs
 
@@ -102,10 +88,6 @@ yarn add react-native-google-auth
   keytool -list -v -keystore ~/.android/debug.keystore -alias androiddebugkey -storepass android -keypass android
   ```
 - Copy the **Client ID**
-
-### For Web (Server-side verification):
-- Application type: **Web application**
-- Copy the **Client ID** (used for token verification on your backend)
 
 ## Usage
 
@@ -147,19 +129,6 @@ const signIn = async () => {
 };
 ```
 
-### Create Account (Android only)
-
-```typescript
-const createAccount = async () => {
-  try {
-    const userInfo = await GoogleAuth.createAccount();
-    console.log('Account created:', userInfo);
-  } catch (error) {
-    console.error('Account creation failed:', error);
-  }
-};
-```
-
 ### Sign Out
 
 ```typescript
@@ -187,7 +156,7 @@ const getTokens = async () => {
 };
 ```
 
-### Check Play Services (Android only)
+### Check Play Services
 
 ```typescript
 const checkPlayServices = async () => {
@@ -199,6 +168,8 @@ const checkPlayServices = async () => {
   }
 };
 ```
+
+*Note: This method is primarily useful on Android to check if Google Play Services are available. On iOS, it always returns `true` since Play Services are not required.*
 
 ## Complete Example
 
@@ -300,7 +271,6 @@ try {
 |--------|----------|-------------|
 | `configure(config)` | iOS, Android | Configure Google Auth with client IDs |
 | `signIn()` | iOS, Android | Sign in with Google |
-| `createAccount()` | Android | Create new Google account |
 | `signOut()` | iOS, Android | Sign out current user |
 | `getTokens()` | iOS, Android | Get access and ID tokens |
 | `checkPlayServices()` | Android | Check if Play Services is available |

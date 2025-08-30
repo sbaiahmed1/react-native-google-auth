@@ -111,23 +111,6 @@ class GoogleAuth: NSObject {
         }
     }
     
-    @objc
-    func createAccount(_ resolve: @escaping RCTPromiseResolveBlock, reject: @escaping RCTPromiseRejectBlock) {
-        guard isConfigured else {
-            reject("NOT_CONFIGURED", "GoogleAuth must be configured before creating account", nil)
-            return
-        }
-        
-        DispatchQueue.main.async {
-            guard let presentingViewController = self.getPresentingViewController() else {
-                reject("NO_VIEW_CONTROLLER", "No presenting view controller found", nil)
-                return
-            }
-            
-            self.performInteractiveSignIn(presentingViewController: presentingViewController, resolve: resolve, reject: reject)
-        }
-    }
-    
     // MARK: - Sign-out
     
     @objc

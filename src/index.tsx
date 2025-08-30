@@ -53,13 +53,6 @@ export const GoogleAuth = {
   },
 
   /**
-   * Create a new Google account (One Tap flow)
-   */
-  createAccount: (): Promise<OneTapResponse> => {
-    return NativeGoogleAuth.createAccount();
-  },
-
-  /**
    * Sign out the current user
    */
   signOut: (): Promise<void> => {

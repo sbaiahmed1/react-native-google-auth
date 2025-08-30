@@ -38,16 +38,7 @@ RCT_EXPORT_METHOD(signIn:(RCTPromiseResolveBlock)resolve
     }
 }
 
-RCT_EXPORT_METHOD(createAccount:(RCTPromiseResolveBlock)resolve
-                  reject:(RCTPromiseRejectBlock)reject) {
-    Class GoogleAuthClass = NSClassFromString(@"GoogleAuth");
-    if (GoogleAuthClass) {
-        id googleAuth = [GoogleAuthClass performSelector:@selector(shared)];
-        if ([googleAuth respondsToSelector:@selector(createAccount:reject:)]) {
-            [googleAuth performSelector:@selector(createAccount:reject:) withObject:resolve withObject:reject];
-        }
-    }
-}
+
 
 // MARK: - Sign-out
 

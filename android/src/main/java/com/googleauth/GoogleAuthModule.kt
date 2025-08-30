@@ -99,43 +99,6 @@ class GoogleAuthModule(reactContext: ReactApplicationContext) :
     }
   }
 
-  override fun createAccount(promise: Promise) {
-    if (!isConfigured) {
-      promise.reject("NOT_CONFIGURED", "GoogleAuth must be configured before creating account")
-      return
-    }
-
-    val currentActivity = currentActivity
-    if (currentActivity == null) {
-      promise.reject("NO_ACTIVITY", "No current activity found")
-      return
-    }
-
-    coroutineScope.launch {
-      try {
-        val result = performInteractiveSignIn(currentActivity)
-        promise.resolve(result)
-      } catch (e: Exception) {
-        Log.e(NAME, "Interactive sign-in failed", e)
-        if (e is GetCredentialException) {
-          when (e.type) {
-            "android.credentials.GetCredentialException.TYPE_USER_CANCELED" -> {
-              val response = Arguments.createMap().apply {
-                putString("type", "cancelled")
-              }
-              promise.resolve(response)
-            }
-            else -> {
-              promise.reject("SIGN_IN_ERROR", e.message ?: "Sign-in failed", e)
-            }
-          }
-        } else {
-          promise.reject("SIGN_IN_ERROR", e.message ?: "Sign-in failed", e)
-        }
-      }
-    }
-  }
-
   // MARK: - Sign-out
 
   override fun signOut(promise: Promise) {
@@ -159,10 +122,22 @@ class GoogleAuthModule(reactContext: ReactApplicationContext) :
 
     // Return cached tokens if available
     if (cachedIdToken != null && cachedUserInfo != null) {
+      // Create a fresh copy of user info to avoid "map already consumed" error
+      val freshUserInfo = Arguments.createMap().apply {
+        cachedUserInfo?.let { cached ->
+          putString("id", cached.getString("id"))
+          putString("name", cached.getString("name"))
+          putString("email", cached.getString("email"))
+          putString("photo", cached.getString("photo"))
+          putString("familyName", cached.getString("familyName"))
+          putString("givenName", cached.getString("givenName"))
+        }
+      }
+      
       val response = Arguments.createMap().apply {
         putString("idToken", cachedIdToken)
         putString("accessToken", cachedAccessToken) // Will be null for Credential Manager
-        putMap("user", cachedUserInfo)
+        putMap("user", freshUserInfo)
       }
       promise.resolve(response)
       return
@@ -310,7 +285,7 @@ class GoogleAuthModule(reactContext: ReactApplicationContext) :
         try {
           val googleIdTokenCredential = GoogleIdTokenCredential.createFrom(credential.data)
           
-          // Create user info for caching
+          // Create user info for caching - create a copy to avoid "map already consumed" error
           val cachedUser = Arguments.createMap().apply {
             putString("id", googleIdTokenCredential.id)
             putString("name", googleIdTokenCredential.displayName)
@@ -320,7 +295,12 @@ class GoogleAuthModule(reactContext: ReactApplicationContext) :
             putString("givenName", googleIdTokenCredential.givenName)
           }
           
-          // Create separate user info for response data
+          // Cache tokens and user info first
+          cachedIdToken = googleIdTokenCredential.idToken
+          cachedAccessToken = null // Credential Manager doesn't provide access tokens directly
+          cachedUserInfo = cachedUser
+          
+          // Create separate user info for response data to avoid "map already consumed" error
           val responseUser = Arguments.createMap().apply {
             putString("id", googleIdTokenCredential.id)
             putString("name", googleIdTokenCredential.displayName)
@@ -329,11 +309,6 @@ class GoogleAuthModule(reactContext: ReactApplicationContext) :
             putString("familyName", googleIdTokenCredential.familyName)
             putString("givenName", googleIdTokenCredential.givenName)
           }
-          
-          // Cache tokens and user info
-          cachedIdToken = googleIdTokenCredential.idToken
-          cachedAccessToken = null // Credential Manager doesn't provide access tokens directly
-          cachedUserInfo = cachedUser
           
           val data = Arguments.createMap().apply {
             putString("idToken", googleIdTokenCredential.idToken)
