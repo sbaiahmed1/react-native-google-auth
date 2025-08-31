@@ -1,5 +1,7 @@
 # react-native-google-auth
 
+> ⚠️ **Development Status**: This library is currently in active development. While core functionality is implemented and working, some features may still be under development or subject to change. Please use with caution in production environments.
+
 A modern React Native Google Authentication library using the latest Google Sign-In SDK for iOS and Android Credential Manager for Android.
 
 ## Features
