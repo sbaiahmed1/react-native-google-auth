@@ -148,6 +148,79 @@ class GoogleAuth: NSObject {
         }
     }
     
+    @objc
+    func refreshTokens(_ resolve: @escaping RCTPromiseResolveBlock, reject: @escaping RCTPromiseRejectBlock) {
+        guard let user = GIDSignIn.sharedInstance.currentUser else {
+            reject("NOT_SIGNED_IN", "No user is currently signed in", nil)
+            return
+        }
+        
+        user.refreshTokensIfNeeded { user, error in
+            if let error = error {
+                reject("TOKEN_REFRESH_ERROR", error.localizedDescription, error)
+                return
+            }
+            
+            guard let user = user,
+                  let idToken = user.idToken?.tokenString else {
+                reject("TOKEN_ERROR", "Failed to refresh tokens", nil)
+                return
+            }
+            
+            let accessToken = user.accessToken.tokenString
+            let expiresAt = user.accessToken.expirationDate?.timeIntervalSince1970 ?? 0
+            
+            // Break up the complex expression to help Swift compiler
+            let userInfo: [String: Any] = [
+                "id": user.userID ?? "",
+                "name": user.profile?.name ?? "",
+                "email": user.profile?.email ?? "",
+                "photo": user.profile?.imageURL(withDimension: 120)?.absoluteString ?? "",
+                "familyName": user.profile?.familyName ?? "",
+                "givenName": user.profile?.givenName ?? ""
+            ]
+            
+            let result: [String: Any] = [
+                "idToken": idToken,
+                "accessToken": accessToken,
+                "expiresAt": expiresAt * 1000, // Convert to milliseconds
+                "user": userInfo
+            ]
+            
+            resolve(result)
+        }
+    }
+    
+    @objc
+    func isTokenExpired(_ resolve: @escaping RCTPromiseResolveBlock, reject: @escaping RCTPromiseRejectBlock) {
+        guard let user = GIDSignIn.sharedInstance.currentUser else {
+            resolve(true) // No user, consider expired
+            return
+        }
+        
+        let isExpired = user.accessToken.expirationDate?.timeIntervalSinceNow ?? 0 <= 0
+        resolve(isExpired)
+    }
+    
+    @objc
+    func getCurrentUser(_ resolve: @escaping RCTPromiseResolveBlock, reject: @escaping RCTPromiseRejectBlock) {
+        guard let user = GIDSignIn.sharedInstance.currentUser else {
+            resolve(nil)
+            return
+        }
+        
+        let userData: [String: Any] = [
+            "id": user.userID ?? "",
+            "name": user.profile?.name ?? "",
+            "email": user.profile?.email ?? "",
+            "photo": user.profile?.imageURL(withDimension: 120)?.absoluteString ?? "",
+            "familyName": user.profile?.familyName ?? "",
+            "givenName": user.profile?.givenName ?? ""
+        ]
+        
+        resolve(userData)
+    }
+    
     // MARK: - Utility Methods
     
     @objc

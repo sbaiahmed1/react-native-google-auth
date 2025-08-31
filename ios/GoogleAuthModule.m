@@ -66,6 +66,39 @@ RCT_EXPORT_METHOD(getTokens:(RCTPromiseResolveBlock)resolve
     }
 }
 
+RCT_EXPORT_METHOD(refreshTokens:(RCTPromiseResolveBlock)resolve
+                  reject:(RCTPromiseRejectBlock)reject) {
+    Class GoogleAuthClass = NSClassFromString(@"GoogleAuth");
+    if (GoogleAuthClass) {
+        id googleAuth = [GoogleAuthClass performSelector:@selector(shared)];
+        if ([googleAuth respondsToSelector:@selector(refreshTokens:reject:)]) {
+            [googleAuth performSelector:@selector(refreshTokens:reject:) withObject:resolve withObject:reject];
+        }
+    }
+}
+
+RCT_EXPORT_METHOD(isTokenExpired:(RCTPromiseResolveBlock)resolve
+                  reject:(RCTPromiseRejectBlock)reject) {
+    Class GoogleAuthClass = NSClassFromString(@"GoogleAuth");
+    if (GoogleAuthClass) {
+        id googleAuth = [GoogleAuthClass performSelector:@selector(shared)];
+        if ([googleAuth respondsToSelector:@selector(isTokenExpired:reject:)]) {
+            [googleAuth performSelector:@selector(isTokenExpired:reject:) withObject:resolve withObject:reject];
+        }
+    }
+}
+
+RCT_EXPORT_METHOD(getCurrentUser:(RCTPromiseResolveBlock)resolve
+                  reject:(RCTPromiseRejectBlock)reject) {
+    Class GoogleAuthClass = NSClassFromString(@"GoogleAuth");
+    if (GoogleAuthClass) {
+        id googleAuth = [GoogleAuthClass performSelector:@selector(shared)];
+        if ([googleAuth respondsToSelector:@selector(getCurrentUser:reject:)]) {
+            [googleAuth performSelector:@selector(getCurrentUser:reject:) withObject:resolve withObject:reject];
+        }
+    }
+}
+
 // MARK: - Utility Methods
 
 RCT_EXPORT_METHOD(checkPlayServices:(BOOL)showErrorDialog

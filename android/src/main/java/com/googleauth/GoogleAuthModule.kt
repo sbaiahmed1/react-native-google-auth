@@ -22,6 +22,10 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.util.Date
+import java.util.concurrent.TimeUnit
+import org.json.JSONObject
+import java.util.Base64
 
 @ReactModule(name = GoogleAuthModule.NAME)
 class GoogleAuthModule(reactContext: ReactApplicationContext) :
@@ -37,6 +41,7 @@ class GoogleAuthModule(reactContext: ReactApplicationContext) :
   private var cachedIdToken: String? = null
   private var cachedAccessToken: String? = null
   private var cachedUserInfo: WritableMap? = null
+  private var tokenExpiresAt: Long? = null
 
   override fun getName(): String {
     return NAME
@@ -155,10 +160,22 @@ class GoogleAuthModule(reactContext: ReactApplicationContext) :
         val result = performSilentSignIn(activity)
         if (result.getString("type") == "success") {
           // Use cached tokens since performSilentSignIn would have updated them
+          // Create a fresh copy of user info to avoid "map already consumed" error
+          val freshUserInfo = Arguments.createMap().apply {
+            cachedUserInfo?.let { cached ->
+              putString("id", cached.getString("id"))
+              putString("name", cached.getString("name"))
+              putString("email", cached.getString("email"))
+              putString("photo", cached.getString("photo"))
+              putString("familyName", cached.getString("familyName"))
+              putString("givenName", cached.getString("givenName"))
+            }
+          }
+          
           val response = Arguments.createMap().apply {
             putString("idToken", cachedIdToken)
             putString("accessToken", cachedAccessToken)
-            putMap("user", cachedUserInfo)
+            putMap("user", freshUserInfo)
           }
           promise.resolve(response)
         } else {
@@ -172,6 +189,82 @@ class GoogleAuthModule(reactContext: ReactApplicationContext) :
   }
 
   // MARK: - Utility Methods
+
+  override fun refreshTokens(promise: Promise) {
+    if (!isConfigured) {
+      promise.reject("NOT_CONFIGURED", "GoogleAuth must be configured before refreshing tokens")
+      return
+    }
+
+    val activity = currentActivity
+    if (activity == null) {
+      promise.reject("NO_ACTIVITY", "No current activity available")
+      return
+    }
+
+    coroutineScope.launch {
+      try {
+        val result = performSilentSignIn(activity)
+        if (result.getString("type") == "success") {
+          // Create a fresh copy of user info to avoid "map already consumed" error
+          val freshUserInfo = Arguments.createMap().apply {
+            cachedUserInfo?.let { cached ->
+              putString("id", cached.getString("id"))
+              putString("name", cached.getString("name"))
+              putString("email", cached.getString("email"))
+              putString("photo", cached.getString("photo"))
+              putString("familyName", cached.getString("familyName"))
+              putString("givenName", cached.getString("givenName"))
+            }
+          }
+          
+          val response = Arguments.createMap().apply {
+            putString("idToken", cachedIdToken)
+            putString("accessToken", cachedAccessToken)
+            putMap("user", freshUserInfo)
+            tokenExpiresAt?.let { putDouble("expiresAt", it.toDouble()) }
+          }
+          promise.resolve(response)
+        } else {
+          promise.reject("REFRESH_FAILED", "Failed to refresh tokens")
+        }
+      } catch (e: Exception) {
+        Log.e(NAME, "Failed to refresh tokens: ${e.message}", e)
+        promise.reject("REFRESH_ERROR", "Failed to refresh tokens: ${e.message}")
+      }
+    }
+  }
+
+  override fun isTokenExpired(promise: Promise) {
+    val expiresAt = tokenExpiresAt
+    if (expiresAt == null) {
+      promise.resolve(true) // No expiration info, consider expired
+      return
+    }
+    
+    val currentTime = System.currentTimeMillis()
+    val isExpired = currentTime >= expiresAt
+    promise.resolve(isExpired)
+  }
+
+  override fun getCurrentUser(promise: Promise) {
+    if (cachedUserInfo != null) {
+      // Create a fresh copy of user info
+      val freshUserInfo = Arguments.createMap().apply {
+        cachedUserInfo?.let { cached ->
+          putString("id", cached.getString("id"))
+          putString("name", cached.getString("name"))
+          putString("email", cached.getString("email"))
+          putString("photo", cached.getString("photo"))
+          putString("familyName", cached.getString("familyName"))
+          putString("givenName", cached.getString("givenName"))
+        }
+      }
+      promise.resolve(freshUserInfo)
+    } else {
+      promise.resolve(null)
+    }
+  }
 
   override fun checkPlayServices(showErrorDialog: Boolean?, promise: Promise) {
     try {
@@ -285,6 +378,10 @@ class GoogleAuthModule(reactContext: ReactApplicationContext) :
         try {
           val googleIdTokenCredential = GoogleIdTokenCredential.createFrom(credential.data)
           
+          // Cache the ID token and parse expiration
+          cachedIdToken = googleIdTokenCredential.idToken
+          parseTokenExpiration(googleIdTokenCredential.idToken)
+          
           // Create user info for caching - create a copy to avoid "map already consumed" error
           val cachedUser = Arguments.createMap().apply {
             putString("id", googleIdTokenCredential.id)
@@ -296,7 +393,6 @@ class GoogleAuthModule(reactContext: ReactApplicationContext) :
           }
           
           // Cache tokens and user info first
-          cachedIdToken = googleIdTokenCredential.idToken
           cachedAccessToken = null // Credential Manager doesn't provide access tokens directly
           cachedUserInfo = cachedUser
           
@@ -327,6 +423,22 @@ class GoogleAuthModule(reactContext: ReactApplicationContext) :
       else -> {
         throw Exception("Unexpected credential type: ${credential.type}")
       }
+    }
+  }
+
+  private fun parseTokenExpiration(idToken: String) {
+    try {
+      val parts = idToken.split(".")
+      if (parts.size >= 2) {
+        val payload = String(Base64.getUrlDecoder().decode(parts[1]))
+        val json = JSONObject(payload)
+        val exp = json.optLong("exp", 0)
+        if (exp > 0) {
+          tokenExpiresAt = exp * 1000 // Convert to milliseconds
+        }
+      }
+    } catch (e: Exception) {
+      Log.w(NAME, "Failed to parse token expiration: ${e.message}")
     }
   }
 
