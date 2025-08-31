@@ -145,8 +145,34 @@ jobs:
         run: |
           cd example
           bundle install
-          bundle exec pod repo update --verbose
-          bundle exec pod install --project-directory=ios
+          cd ios && bundle exec pod repo update --verbose
+          cd ios && bundle exec pod install
+
+      - name: Debug iOS Environment
+        run: |
+          echo "=== System Information ==="
+          sw_vers
+          echo "\n=== Xcode Information ==="
+          xcodebuild -version
+          xcode-select -p
+          echo "\n=== Available iOS Simulators ==="
+          xcrun simctl list devices available
+          echo "\n=== iOS SDKs ==="
+          xcodebuild -showsdks | grep iOS
+          echo "\n=== React Native Doctor ==="
+          cd example
+          npx react-native doctor
+          echo "\n=== CocoaPods Environment ==="
+          bundle exec pod --version
+          echo "\n=== Xcode Project Info ==="
+          cd ios
+          xcodebuild -list -workspace GoogleAuthExample.xcworkspace
+
+      - name: Install React Native CLI
+        run: |
+          cd example
+          npm install -g @react-native-community/cli@latest
+          npx react-native --version
 
       - name: Build example for iOS
         run: |
