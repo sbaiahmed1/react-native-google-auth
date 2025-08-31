@@ -9,6 +9,8 @@ export const GoogleAuthErrorCodes = {
 
   // Sign-in errors
   SIGN_IN_ERROR: 'SIGN_IN_ERROR',
+  SIGN_IN_CANCELLED: 'SIGN_IN_CANCELLED',
+  IN_PROGRESS: 'IN_PROGRESS',
   NOT_SIGNED_IN: 'NOT_SIGNED_IN',
 
   // Platform-specific errors
@@ -18,6 +20,9 @@ export const GoogleAuthErrorCodes = {
   // Token errors
   TOKEN_ERROR: 'TOKEN_ERROR',
   TOKEN_REFRESH_ERROR: 'TOKEN_REFRESH_ERROR',
+  TOKEN_REFRESH_FAILED: 'TOKEN_REFRESH_FAILED',
+  TOKEN_EXPIRED: 'TOKEN_EXPIRED',
+  INVALID_TOKEN: 'INVALID_TOKEN',
 
   // Play Services errors (Android)
   PLAY_SERVICES_NOT_AVAILABLE: 'PLAY_SERVICES_NOT_AVAILABLE',
@@ -25,6 +30,9 @@ export const GoogleAuthErrorCodes = {
 
   // One-tap specific errors
   ONE_TAP_START_FAILED: 'ONE_TAP_START_FAILED',
+
+  // Network errors
+  NETWORK_ERROR: 'NETWORK_ERROR',
 
   // Implementation errors
   NOT_IMPLEMENTED: 'NOT_IMPLEMENTED',

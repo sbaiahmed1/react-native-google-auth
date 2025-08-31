@@ -48,6 +48,13 @@ export type OneTapResponse =
 export interface GetTokensResponse {
   idToken: string;
   accessToken: string;
+  expiresAt?: number; // Unix timestamp when token expires
+}
+
+export interface RefreshTokensResponse {
+  idToken: string;
+  accessToken: string;
+  expiresAt?: number;
 }
 
 export interface PlayServicesInfo {
@@ -67,6 +74,11 @@ export interface Spec extends TurboModule {
 
   // Token management
   getTokens(): Promise<GetTokensResponse>;
+  refreshTokens(): Promise<RefreshTokensResponse>;
+  isTokenExpired(): Promise<boolean>;
+
+  // Profile management
+  getCurrentUser(): Promise<User | null>;
 
   // Utility methods
   checkPlayServices(showErrorDialog?: boolean): Promise<PlayServicesInfo>;
