@@ -1,6 +1,6 @@
 {
   "name": "react-native-google-auth",
-  "version": "0.1.0",
+  "version": "0.0.0",
   "description": "A google auth react native library for android and iOS",
   "main": "./lib/module/index.js",
   "types": "./lib/typescript/src/index.d.ts",
