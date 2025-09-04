@@ -62,12 +62,15 @@ class GoogleAuthModule(reactContext: ReactApplicationContext) :
         EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
       )
     } catch (e: Exception) {
-      Log.w("GoogleAuth", "Failed to create encrypted preferences, falling back to regular: " + (e.localizedMessage ?: "Unknown error"))
-      reactApplicationContext.getSharedPreferences("google_auth_prefs", Context.MODE_PRIVATE)
+      Log.e("GoogleAuth", "Failed to create encrypted preferences: " + (e.localizedMessage ?: "Unknown error"))
+      // Security: Throw error instead of falling back to unencrypted storage
+      // This prevents sensitive data from being stored in plaintext
+      throw SecurityException("Unable to create secure storage for credentials. Encrypted storage is required for security.")
     }
   }
   
-  // In-memory token caching for performance
+  // In-memory token caching for performance with thread safety
+  private val credentialLock = Any()
   private var cachedIdToken: String? = null
   private var cachedAccessToken: String? = null
   private var cachedUserInfo: WritableMap? = null
@@ -77,6 +80,17 @@ class GoogleAuthModule(reactContext: ReactApplicationContext) :
     // Register lifecycle observer to handle app state changes on main thread
     reactApplicationContext.runOnUiQueueThread {
       ProcessLifecycleOwner.get().lifecycle.addObserver(this)
+    }
+  }
+  
+  override fun onCatalystInstanceDestroy() {
+    super.onCatalystInstanceDestroy()
+    // Remove lifecycle observer to prevent memory leaks
+    try {
+      ProcessLifecycleOwner.get().lifecycle.removeObserver(this)
+      Log.d("GoogleAuth", "Lifecycle observer removed successfully")
+    } catch (e: Exception) {
+      Log.w("GoogleAuth", "Failed to remove lifecycle observer: " + (e.localizedMessage ?: "Unknown error"))
     }
   }
   
@@ -94,8 +108,10 @@ class GoogleAuthModule(reactContext: ReactApplicationContext) :
   fun onAppBackgrounded() {
     Log.d("GoogleAuth", "App backgrounded - saving credential state")
     // Ensure credentials are saved when app goes to background
-    if (cachedIdToken != null) {
-      saveCredentialsSecurely(cachedIdToken, cachedAccessToken, cachedUserInfo, tokenExpiresAt)
+    synchronized(credentialLock) {
+      if (cachedIdToken != null) {
+        saveCredentialsSecurely(cachedIdToken, cachedAccessToken, cachedUserInfo, tokenExpiresAt)
+      }
     }
   }
 
@@ -166,10 +182,12 @@ class GoogleAuthModule(reactContext: ReactApplicationContext) :
     coroutineScope.launch {
       try {
         // Clear cached tokens and user info
-        cachedIdToken = null
-        cachedAccessToken = null
-        cachedUserInfo = null
-        tokenExpiresAt = null
+        synchronized(credentialLock) {
+          cachedIdToken = null
+          cachedAccessToken = null
+          cachedUserInfo = null
+          tokenExpiresAt = null
+        }
         
         // Clear secure storage
         clearCredentialsSecurely()
@@ -212,32 +230,34 @@ class GoogleAuthModule(reactContext: ReactApplicationContext) :
       return
     }
 
-    // Try to load from cache first, then from secure storage
-    if (cachedIdToken == null) {
-      loadCredentialsSecurely()
-    }
+    synchronized(credentialLock) {
+      // Try to load from cache first, then from secure storage
+      if (cachedIdToken == null) {
+        loadCredentialsSecurely()
+      }
 
-    // Return cached tokens if available
-    if (cachedIdToken != null && cachedUserInfo != null) {
-      // Create a fresh copy of user info to avoid "map already consumed" error
-      val freshUserInfo = Arguments.createMap().apply {
-        cachedUserInfo?.let { cached ->
-          putString("id", cached.getString("id"))
-          putString("name", cached.getString("name"))
-          putString("email", cached.getString("email"))
-          putString("photo", cached.getString("photo"))
-          putString("familyName", cached.getString("familyName"))
-          putString("givenName", cached.getString("givenName"))
+      // Return cached tokens if available
+      if (cachedIdToken != null && cachedUserInfo != null) {
+        // Create a fresh copy of user info to avoid "map already consumed" error
+        val freshUserInfo = Arguments.createMap().apply {
+          cachedUserInfo?.let { cached ->
+            putString("id", cached.getString("id"))
+            putString("name", cached.getString("name"))
+            putString("email", cached.getString("email"))
+            putString("photo", cached.getString("photo"))
+            putString("familyName", cached.getString("familyName"))
+            putString("givenName", cached.getString("givenName"))
+          }
         }
+        
+        val response = Arguments.createMap().apply {
+          putString("idToken", cachedIdToken)
+          putString("accessToken", cachedAccessToken) // Will be null for Credential Manager
+          putMap("user", freshUserInfo)
+        }
+        promise.resolve(response)
+        return
       }
-      
-      val response = Arguments.createMap().apply {
-        putString("idToken", cachedIdToken)
-        putString("accessToken", cachedAccessToken) // Will be null for Credential Manager
-        putMap("user", freshUserInfo)
-      }
-      promise.resolve(response)
-      return
     }
 
     // No cached tokens, try silent sign-in
@@ -328,38 +348,42 @@ class GoogleAuthModule(reactContext: ReactApplicationContext) :
   }
 
   override fun isTokenExpired(promise: Promise) {
-    val expiresAt = tokenExpiresAt
-    if (expiresAt == null) {
-      promise.resolve(true) // No expiration info, consider expired
-      return
+    synchronized(credentialLock) {
+      val expiresAt = tokenExpiresAt
+      if (expiresAt == null) {
+        promise.resolve(true) // No expiration info, consider expired
+        return
+      }
+      
+      val currentTime = System.currentTimeMillis()
+      val isExpired = currentTime >= expiresAt
+      promise.resolve(isExpired)
     }
-    
-    val currentTime = System.currentTimeMillis()
-    val isExpired = currentTime >= expiresAt
-    promise.resolve(isExpired)
   }
 
   override fun getCurrentUser(promise: Promise) {
-    // Try to load from cache first, then from secure storage
-    if (cachedUserInfo == null) {
-      loadCredentialsSecurely()
-    }
-    
-    if (cachedUserInfo != null) {
-      // Create a fresh copy of user info
-      val freshUserInfo = Arguments.createMap().apply {
-        cachedUserInfo?.let { cached ->
-          putString("id", cached.getString("id"))
-          putString("name", cached.getString("name"))
-          putString("email", cached.getString("email"))
-          putString("photo", cached.getString("photo"))
-          putString("familyName", cached.getString("familyName"))
-          putString("givenName", cached.getString("givenName"))
-        }
+    synchronized(credentialLock) {
+      // Try to load from cache first, then from secure storage
+      if (cachedUserInfo == null) {
+        loadCredentialsSecurely()
       }
-      promise.resolve(freshUserInfo)
-    } else {
-      promise.resolve(null)
+      
+      if (cachedUserInfo != null) {
+        // Create a fresh copy of user info
+        val freshUserInfo = Arguments.createMap().apply {
+          cachedUserInfo?.let { cached ->
+            putString("id", cached.getString("id"))
+            putString("name", cached.getString("name"))
+            putString("email", cached.getString("email"))
+            putString("photo", cached.getString("photo"))
+            putString("familyName", cached.getString("familyName"))
+            putString("givenName", cached.getString("givenName"))
+          }
+        }
+        promise.resolve(freshUserInfo)
+      } else {
+        promise.resolve(null)
+      }
     }
   }
 
@@ -412,14 +436,77 @@ class GoogleAuthModule(reactContext: ReactApplicationContext) :
            message.contains("unavailable") ||
            message.contains("service temporarily unavailable")
   }
+  
+  private fun isNonRetryableConfigurationError(exception: Exception): Boolean {
+    val message = exception.message?.lowercase() ?: ""
+    return message.contains("configuration") ||
+           message.contains("invalid client") ||
+           message.contains("client id") ||
+           message.contains("oauth") ||
+           message.contains("developer console") ||
+           message.contains("api key") ||
+           message.contains("sha") ||
+           message.contains("fingerprint") ||
+           exception is IllegalStateException ||
+           exception is IllegalArgumentException
+  }
+
+  private suspend fun <T> executeWithRetry(
+    maxRetries: Int,
+    operationName: String,
+    operation: suspend () -> T
+  ): T {
+    var retryCount = 0
+    
+    while (retryCount <= maxRetries) {
+      try {
+        return operation()
+      } catch (e: GetCredentialCustomException) {
+        Log.e(NAME, "GetCredentialCustomException in $operationName - Developer console setup error")
+        Log.e(NAME, "Error code: " + e.type + ", Message: " + (e.localizedMessage ?: "Unknown error"))
+        
+        // Immediately fail for configuration errors
+        if (isNonRetryableConfigurationError(e)) {
+          Log.e(NAME, "Non-retryable configuration error detected, failing immediately")
+          throw e
+        }
+        
+        // Only retry for network-related custom exceptions
+        if (retryCount < maxRetries && e.localizedMessage?.contains("network", ignoreCase = true) == true) {
+          retryCount++
+          Log.d(NAME, "Retrying $operationName (attempt $retryCount/$maxRetries)")
+          delay(1000L * retryCount) // Exponential backoff
+          continue
+        }
+        throw e
+      } catch (e: Exception) {
+        Log.e(NAME, "$operationName failed: " + (e.localizedMessage ?: "Unknown error"))
+        
+        // Immediately fail for configuration errors
+        if (isNonRetryableConfigurationError(e)) {
+          Log.e(NAME, "Non-retryable configuration error detected, failing immediately")
+          throw e
+        }
+        
+        // Only retry for retryable errors
+        if (retryCount < maxRetries && isRetryableError(e)) {
+          retryCount++
+          Log.d(NAME, "Retrying $operationName (attempt $retryCount/$maxRetries)")
+          delay(1000L * retryCount) // Exponential backoff
+          continue
+        }
+        throw e
+      }
+    }
+    
+    // This should never be reached, but just in case
+    throw Exception("$operationName failed after $maxRetries retries")
+  }
 
   private suspend fun performSilentSignIn(activity: Activity): WritableMap {
     return withContext(Dispatchers.IO) {
-      var retryCount = 0
-      val maxRetries = 2
-      
-      while (retryCount <= maxRetries) {
-        try {
+      try {
+        executeWithRetry(maxRetries = 2, operationName = "silent sign-in") {
           val googleIdOption = GetGoogleIdOption.Builder()
             .setServerClientId(getClientId())
             .setFilterByAuthorizedAccounts(true) // Only show accounts that have previously signed in
@@ -434,43 +521,20 @@ class GoogleAuthModule(reactContext: ReactApplicationContext) :
             context = activity
           )
           Log.d(NAME, "Credential retrieved successfully, processing response")
-          return@withContext handleCredentialResponse(result)
-        } catch (e: GetCredentialCustomException) {
-          Log.e(NAME, "GetCredentialCustomException in silent sign-in - Developer console setup error")
-          Log.e(NAME, "Error code: " + e.type + ", Message: " + (e.localizedMessage ?: "Unknown error"))
-          if (retryCount < maxRetries && e.localizedMessage?.contains("network", ignoreCase = true) == true) {
-            retryCount++
-            Log.d(NAME, "Retrying silent sign-in (attempt $retryCount/$maxRetries)")
-            delay(1000L * retryCount) // Exponential backoff
-            continue
-          }
-          throw Exception("Developer console is not set up correctly. Please verify your OAuth 2.0 Client ID configuration in Google Cloud Console and ensure the SHA-1 fingerprint is correctly added.")
-        } catch (e: NoCredentialException) {
-          throw Exception("No saved credential found")
-        } catch (e: Exception) {
-          Log.e(NAME, "Silent sign-in failed: " + (e.localizedMessage ?: "Unknown error"))
-          if (retryCount < maxRetries && isRetryableError(e)) {
-            retryCount++
-            Log.d(NAME, "Retrying silent sign-in (attempt $retryCount/$maxRetries)")
-            delay(1000L * retryCount) // Exponential backoff
-            continue
-          }
-          throw e
+          handleCredentialResponse(result)
         }
+      } catch (e: GetCredentialCustomException) {
+        throw Exception("Developer console is not set up correctly. Please verify your OAuth 2.0 Client ID configuration in Google Cloud Console and ensure the SHA-1 fingerprint is correctly added.")
+      } catch (e: NoCredentialException) {
+        throw Exception("No saved credential found")
       }
-      
-      // This should never be reached, but just in case
-      throw Exception("Silent sign-in failed after $maxRetries retries")
     }
   }
 
   private suspend fun performInteractiveSignIn(activity: Activity): WritableMap {
     return withContext(Dispatchers.IO) {
-      var retryCount = 0
-      val maxRetries = 1 // Less retries for interactive sign-in
-      
-      while (retryCount <= maxRetries) {
-        try {
+      try {
+        executeWithRetry(maxRetries = 1, operationName = "interactive sign-in") {
           val signInWithGoogleOption = GetSignInWithGoogleOption.Builder(getClientId())
             .build()
 
@@ -483,49 +547,33 @@ class GoogleAuthModule(reactContext: ReactApplicationContext) :
             context = activity
           )
           Log.d(NAME, "Credential retrieved successfully, processing response")
-          return@withContext handleCredentialResponse(result)
-        } catch (e: GetCredentialCustomException) {
-          Log.e(NAME, "GetCredentialCustomException caught - Developer console setup error")
-          Log.e(NAME, "Error code: " + e.type + ", Message: " + (e.localizedMessage ?: "Unknown error"))
-          
-          if (retryCount < maxRetries && e.localizedMessage?.contains("network", ignoreCase = true) == true) {
-            retryCount++
-            Log.d(NAME, "Retrying interactive sign-in (attempt $retryCount/$maxRetries)")
-            delay(2000L * retryCount)
-            continue
-          }
-          
-          return@withContext Arguments.createMap().apply {
-            putString("type", "configuration_error")
-            putString("message", "Developer console is not set up correctly. Please verify your OAuth 2.0 Client ID configuration in Google Cloud Console and ensure the SHA-1 fingerprint is correctly added.")
-            putString("errorCode", e.type)
-          }
-        } catch (e: GetCredentialCancellationException) {
-          Log.d(NAME, "GetCredentialCancellationException caught - This may be a known issue with Credential Manager API")
-          Log.d(NAME, "Exception message: " + (e.localizedMessage ?: "Unknown error"))
-          
-          // Known issue: GetCredentialCancellationException is sometimes thrown even when user completes consent
-          // This is a workaround for the Credential Manager API issue
-          // Reference: https://stackoverflow.com/questions/78345532/credential-manager-always-returns-getcredentialcancellationexception-activity
-          return@withContext Arguments.createMap().apply {
-            putString("type", "cancelled")
-            putString("message", "Sign-in was cancelled. This might be due to a known Credential Manager API issue. Please try recreating OAuth 2.0 Client IDs in Google Cloud Console if this persists.")
-          }
-        } catch (e: GetCredentialException) {
-          Log.d(NAME, "GetCredentialException caught - Type: " + e.type + ", Message: " + (e.localizedMessage ?: "Unknown error"))
-          Log.e(NAME, "Interactive sign-in failed - Type: " + e.type + ", Message: " + (e.localizedMessage ?: "Unknown error"), e)
-          if (retryCount < maxRetries && isRetryableError(e)) {
-            retryCount++
-            Log.d(NAME, "Retrying interactive sign-in (attempt $retryCount/$maxRetries)")
-            delay(2000L * retryCount)
-            continue
-          }
-          throw e
+          handleCredentialResponse(result)
         }
+      } catch (e: GetCredentialCustomException) {
+        Log.e(NAME, "GetCredentialCustomException caught - Developer console setup error")
+        Log.e(NAME, "Error code: " + e.type + ", Message: " + (e.localizedMessage ?: "Unknown error"))
+        
+        return@withContext Arguments.createMap().apply {
+          putString("type", "configuration_error")
+          putString("message", "Developer console is not set up correctly. Please verify your OAuth 2.0 Client ID configuration in Google Cloud Console and ensure the SHA-1 fingerprint is correctly added.")
+          putString("errorCode", e.type)
+        }
+      } catch (e: GetCredentialCancellationException) {
+        Log.d(NAME, "GetCredentialCancellationException caught - This may be a known issue with Credential Manager API")
+        Log.d(NAME, "Exception message: " + (e.localizedMessage ?: "Unknown error"))
+        
+        // Known issue: GetCredentialCancellationException is sometimes thrown even when user completes consent
+        // This is a workaround for the Credential Manager API issue
+        // Reference: https://stackoverflow.com/questions/78345532/credential-manager-always-returns-getcredentialcancellationexception-activity
+        return@withContext Arguments.createMap().apply {
+          putString("type", "cancelled")
+          putString("message", "Sign-in was cancelled. This might be due to a known Credential Manager API issue. Please try recreating OAuth 2.0 Client IDs in Google Cloud Console if this persists.")
+        }
+      } catch (e: GetCredentialException) {
+        Log.d(NAME, "GetCredentialException caught - Type: " + e.type + ", Message: " + (e.localizedMessage ?: "Unknown error"))
+        Log.e(NAME, "Interactive sign-in failed - Type: " + e.type + ", Message: " + (e.localizedMessage ?: "Unknown error"), e)
+        throw e
       }
-      
-      // This should never be reached, but just in case
-      throw Exception("Interactive sign-in failed after $maxRetries retries")
     }
   }
 
@@ -538,26 +586,28 @@ class GoogleAuthModule(reactContext: ReactApplicationContext) :
         try {
           val googleIdTokenCredential = GoogleIdTokenCredential.createFrom(credential.data)
           
-          // Cache the ID token and parse expiration
-          cachedIdToken = googleIdTokenCredential.idToken
-          parseTokenExpiration(googleIdTokenCredential.idToken)
-          
-          // Create user info for caching - create a copy to avoid "map already consumed" error
-          val cachedUser = Arguments.createMap().apply {
-            putString("id", googleIdTokenCredential.id)
-            putString("name", googleIdTokenCredential.displayName)
-            putString("email", googleIdTokenCredential.id) // Email is typically the ID
-            putString("photo", googleIdTokenCredential.profilePictureUri?.toString())
-            putString("familyName", googleIdTokenCredential.familyName)
-            putString("givenName", googleIdTokenCredential.givenName)
+          // Cache the ID token and parse expiration with thread safety
+          synchronized(credentialLock) {
+            cachedIdToken = googleIdTokenCredential.idToken
+            parseTokenExpiration(googleIdTokenCredential.idToken)
+            
+            // Create user info for caching - create a copy to avoid "map already consumed" error
+            val cachedUser = Arguments.createMap().apply {
+              putString("id", googleIdTokenCredential.id)
+              putString("name", googleIdTokenCredential.displayName)
+              putString("email", googleIdTokenCredential.id) // Email is typically the ID
+              putString("photo", googleIdTokenCredential.profilePictureUri?.toString())
+              putString("familyName", googleIdTokenCredential.familyName)
+              putString("givenName", googleIdTokenCredential.givenName)
+            }
+            
+            // Cache tokens and user info first
+            cachedAccessToken = null // Credential Manager doesn't provide access tokens directly
+            cachedUserInfo = cachedUser
+            
+            // Save to secure storage
+            saveCredentialsSecurely(cachedIdToken, cachedAccessToken, cachedUserInfo, tokenExpiresAt)
           }
-          
-          // Cache tokens and user info first
-          cachedAccessToken = null // Credential Manager doesn't provide access tokens directly
-          cachedUserInfo = cachedUser
-          
-          // Save to secure storage
-          saveCredentialsSecurely(cachedIdToken, cachedAccessToken, cachedUserInfo, tokenExpiresAt)
           
           // Create separate user info for response data to avoid "map already consumed" error
           val responseUser = Arguments.createMap().apply {
@@ -629,30 +679,32 @@ class GoogleAuthModule(reactContext: ReactApplicationContext) :
         return false
       }
       
-      cachedIdToken = securePrefs.getString(PREF_ID_TOKEN, null)
-      cachedAccessToken = securePrefs.getString(PREF_ACCESS_TOKEN, null)
-      tokenExpiresAt = securePrefs.getLong(PREF_TOKEN_EXPIRES_AT, 0).takeIf { it > 0 }
-      
-      val userInfoJson = securePrefs.getString(PREF_USER_INFO, null)
-      cachedUserInfo = userInfoJson?.let {
-        try {
-          val jsonObject = JSONObject(it)
-          Arguments.createMap().apply {
-            if (jsonObject.has("id")) putString("id", jsonObject.getString("id"))
-            if (jsonObject.has("name")) putString("name", jsonObject.getString("name"))
-            if (jsonObject.has("email")) putString("email", jsonObject.getString("email"))
-            if (jsonObject.has("photo")) putString("photo", jsonObject.getString("photo"))
-            if (jsonObject.has("familyName")) putString("familyName", jsonObject.getString("familyName"))
-            if (jsonObject.has("givenName")) putString("givenName", jsonObject.getString("givenName"))
+      synchronized(credentialLock) {
+        cachedIdToken = securePrefs.getString(PREF_ID_TOKEN, null)
+        cachedAccessToken = securePrefs.getString(PREF_ACCESS_TOKEN, null)
+        tokenExpiresAt = securePrefs.getLong(PREF_TOKEN_EXPIRES_AT, 0).takeIf { it > 0 }
+        
+        val userInfoJson = securePrefs.getString(PREF_USER_INFO, null)
+        cachedUserInfo = userInfoJson?.let {
+          try {
+            val jsonObject = JSONObject(it)
+            Arguments.createMap().apply {
+              if (jsonObject.has("id")) putString("id", jsonObject.getString("id"))
+              if (jsonObject.has("name")) putString("name", jsonObject.getString("name"))
+              if (jsonObject.has("email")) putString("email", jsonObject.getString("email"))
+              if (jsonObject.has("photo")) putString("photo", jsonObject.getString("photo"))
+              if (jsonObject.has("familyName")) putString("familyName", jsonObject.getString("familyName"))
+              if (jsonObject.has("givenName")) putString("givenName", jsonObject.getString("givenName"))
+            }
+          } catch (e: Exception) {
+            Log.w("GoogleAuth", "Failed to parse cached user info: " + (e.localizedMessage ?: "Unknown error"))
+            null
           }
-        } catch (e: Exception) {
-          Log.w("GoogleAuth", "Failed to parse cached user info: " + (e.localizedMessage ?: "Unknown error"))
-          null
         }
+        
+        Log.d("GoogleAuth", "Credentials loaded from secure storage")
+        return@synchronized cachedIdToken != null
       }
-      
-      Log.d("GoogleAuth", "Credentials loaded from secure storage")
-      cachedIdToken != null
     } catch (e: Exception) {
       Log.e("GoogleAuth", "Failed to load credentials securely: " + (e.localizedMessage ?: "Unknown error"))
       false
@@ -660,18 +712,25 @@ class GoogleAuthModule(reactContext: ReactApplicationContext) :
   }
   
   private fun clearCredentialsSecurely() {
-    try {
-      securePrefs.edit().apply {
-        remove(PREF_ID_TOKEN)
-        remove(PREF_ACCESS_TOKEN)
-        remove(PREF_USER_INFO)
-        remove(PREF_TOKEN_EXPIRES_AT)
-        remove(PREF_IS_SIGNED_IN)
-        apply()
+    synchronized(credentialLock) {
+      try {
+        securePrefs.edit().apply {
+          remove(PREF_ID_TOKEN)
+          remove(PREF_ACCESS_TOKEN)
+          remove(PREF_USER_INFO)
+          remove(PREF_TOKEN_EXPIRES_AT)
+          remove(PREF_IS_SIGNED_IN)
+          apply()
+        }
+        // Clear in-memory cache as well
+        cachedIdToken = null
+        cachedAccessToken = null
+        cachedUserInfo = null
+        tokenExpiresAt = null
+        Log.d("GoogleAuth", "Credentials cleared from secure storage")
+      } catch (e: Exception) {
+        Log.e("GoogleAuth", "Failed to clear credentials securely: " + (e.localizedMessage ?: "Unknown error"))
       }
-      Log.d("GoogleAuth", "Credentials cleared from secure storage")
-    } catch (e: Exception) {
-      Log.e("GoogleAuth", "Failed to clear credentials securely: " + (e.localizedMessage ?: "Unknown error"))
     }
   }
   
