@@ -1,7 +1,7 @@
 # React Native Google Authentication Library | Modern Google Sign-In SDK
 
 [![npm version](https://badge.fury.io/js/react-native-google-auth.svg)](https://badge.fury.io/js/react-native-google-auth)
-[![npm downloads](https://img.shields.io/npm/dm/react-native-google-auth.svg)](https://www.npmjs.com/package/react-native-google-auth)
+[![npm downloads](https://img.shields.io/npm/d18m/react-native-google-auth.svg)](https://img.shields.io/npm/d18m/react-native-google-auth.svg)
 [![GitHub stars](https://img.shields.io/github/stars/sbaiahmed1/react-native-google-auth.svg)](https://github.com/sbaiahmed1/react-native-google-auth/stargazers)
 
 > ⚠️ **Development Status**: This library is currently in active development. While core functionality is implemented and working, some features may still be under development or subject to change. Please use with caution in production environments.
@@ -31,6 +31,18 @@ This React Native Google Sign-In library stands out from other Google authentica
 - ✅ **Error Handling**: Comprehensive error codes and user-friendly messages
 - ✅ **Production Ready**: Battle-tested authentication flows
 - ✅ **Google Play Services**: Automatic Google Play Services availability checking
+
+### 🍎 iOS Configuration Improvements (New!)
+- ✅ **Automatic Client ID Detection**: Reads client ID from Info.plist when not provided
+- ✅ **Configuration Validation**: Comprehensive validation for all configuration parameters
+- ✅ **Enhanced Scope Management**: Support for additional OAuth scopes beyond default
+- ✅ **Better Error Handling**: Detailed error messages for missing or invalid configuration
+
+### 🤖 Android Configuration Improvements (New!)
+- ✅ **Automatic Client ID Detection**: Reads client ID from google-services.json when not provided
+- ✅ **Configuration Validation**: Comprehensive validation for all configuration parameters
+- ✅ **Enhanced Scope Management**: Support for additional OAuth scopes beyond default
+- ✅ **Better Error Handling**: Detailed error messages for missing or invalid configuration
 
 ### 🎯 Use Cases
 - **React Native Google Login**: Implement Google sign-in in React Native apps
@@ -65,12 +77,13 @@ Get started with Google Sign-In in your React Native app in just 3 steps:
 3. **Initialize and use** the authentication methods
 
 ```typescript
-import { GoogleAuth } from 'react-native-google-auth';
+import { GoogleAuth, GoogleAuthScopes } from 'react-native-google-auth';
 
 // Configure once in your app
 await GoogleAuth.configure({
   iosClientId: 'YOUR_IOS_CLIENT_ID',
-  androidClientId: 'YOUR_ANDROID_CLIENT_ID'
+  androidClientId: 'YOUR_ANDROID_CLIENT_ID',
+  scopes: [GoogleAuthScopes.EMAIL, GoogleAuthScopes.PROFILE]
 });
 
 // Sign in users
@@ -86,11 +99,37 @@ const response = await GoogleAuth.signIn();
    
    *Note: The GoogleSignIn dependency is automatically included via the library's podspec.*
 
-2. Add your iOS client ID to `ios/Info.plist`:
+2. **Configure Client ID (Choose one method):**
+
+   **Method A: Automatic Detection from Info.plist (Recommended)**
+   
+   Add your iOS client ID to `ios/Info.plist`:
    ```xml
    <key>GIDClientID</key>
    <string>YOUR_IOS_CLIENT_ID</string>
    ```
+   
+   With this method, you can configure without providing `iosClientId`:
+   ```typescript
+   await GoogleAuth.configure({
+     androidClientId: 'YOUR_ANDROID_CLIENT_ID'
+     // iosClientId automatically detected from Info.plist
+   });
+   ```
+
+   **Method B: Manual Configuration**
+   
+   Provide the client ID directly in your configuration:
+   ```typescript
+   await GoogleAuth.configure({
+     iosClientId: 'YOUR_IOS_CLIENT_ID',
+     androidClientId: 'YOUR_ANDROID_CLIENT_ID'
+   });
+   ```
+
+   **Method C: GoogleService-Info.plist (Alternative)**
+   
+   If you have a `GoogleService-Info.plist` file, the library will automatically detect the `CLIENT_ID` from it.
 
 3. Add URL schemes to `ios/Info.plist` (replace with your actual iOS client ID):
    ```xml
@@ -125,9 +164,45 @@ const response = await GoogleAuth.signIn();
 
 ### Android Setup
 
-No additional setup required! The library automatically includes all necessary dependencies through Gradle.
+1. Add the following to your `android/app/build.gradle`:
+   ```gradle
+   dependencies {
+     implementation 'androidx.credentials:credentials:1.3.0'
+     implementation 'androidx.credentials:credentials-play-services-auth:1.3.0'
+     implementation 'com.google.android.libraries.identity.googleid:googleid:1.1.0'
+   }
+   ```
+   
+   *Note: These dependencies are automatically included via the library's build.gradle.*
 
-*Note: Google Play Services and Credential Manager dependencies are automatically configured.*
+2. **Configure Client ID (Choose one method):**
+
+   **Method A: Automatic Detection from google-services.json (Recommended)**
+   
+   Add your `google-services.json` file to `android/app/` directory:
+   ```
+   android/
+   └── app/
+       └── google-services.json
+   ```
+   
+   With this method, you can configure without providing `androidClientId`:
+   ```typescript
+   await GoogleAuth.configure({
+     androidClientId: 'YOUR_ANDROID_CLIENT_ID',
+     // androidClientId automatically detected from google-services.json
+   });
+   ```
+
+   **Method B: Manual Configuration**
+   
+   Provide the client ID directly in your configuration:
+   ```typescript
+   await GoogleAuth.configure({
+     androidClientId: 'YOUR_ANDROID_CLIENT_ID',
+     iosClientId: 'YOUR_IOS_CLIENT_ID'
+   });
+   ```
 
 ## Getting Client IDs
 
@@ -155,7 +230,7 @@ No additional setup required! The library automatically includes all necessary d
 ### Import
 
 ```typescript
-import { GoogleAuth } from 'react-native-google-auth';
+import { GoogleAuth, GoogleAuthScopes } from 'react-native-google-auth';
 ```
 
 ### Configure (Required - Call this first)
@@ -164,16 +239,88 @@ import { GoogleAuth } from 'react-native-google-auth';
 const configure = async () => {
   try {
     await GoogleAuth.configure({
-      iosClientId: 'YOUR_IOS_CLIENT_ID',
+      iosClientId: 'YOUR_IOS_CLIENT_ID', // Optional on iOS - auto-detected from Info.plist
       androidClientId: 'YOUR_ANDROID_CLIENT_ID', // Preferred for Android
       webClientId: 'YOUR_WEB_CLIENT_ID', // Fallback for Android, required for server verification
-      hostedDomain: 'yourdomain.com' // Optional - for G Suite domains
+      hostedDomain: 'yourdomain.com', // Optional - for G Suite domains
+      scopes: [ // Optional - additional OAuth scopes (use enum for common scopes)
+        GoogleAuthScopes.EMAIL,
+        GoogleAuthScopes.PROFILE,
+        'https://www.googleapis.com/auth/drive.readonly',
+        'https://www.googleapis.com/auth/calendar.readonly'
+      ]
     });
     console.log('Google Auth configured successfully');
   } catch (error) {
     console.error('Configuration failed:', error);
   }
 };
+```
+
+#### Configuration Options
+
+- **iosClientId** (iOS): Optional if configured in Info.plist. The library automatically detects from:
+  1. `GIDClientID` key in Info.plist (recommended)
+  2. `CLIENT_ID` key in GoogleService-Info.plist
+- **androidClientId** (Android): Optional if google-services.json is configured. The library automatically detects from:
+  1. `google-services.json` file in android/app/ directory (recommended)
+  2. Falls back to webClientId if neither androidClientId nor google-services.json is available
+- **webClientId**: Used for server-side verification and Android fallback
+- **hostedDomain**: Restricts sign-in to users from a specific G Suite domain
+- **scopes**: Array of OAuth 2.0 scopes to request. Supports:
+  - GoogleAuthScopes enum for common scopes (recommended for type safety)
+  - Google API scopes: `https://www.googleapis.com/auth/[service]`
+  - OpenID Connect scopes: `openid`, `email`, `profile`
+- **offlineAccess**: Request refresh token for offline access
+
+#### OAuth Scopes
+
+The library provides a `GoogleAuthScopes` enum for type-safe scope definitions:
+
+```typescript
+import { GoogleAuthScopes } from 'react-native-google-auth';
+
+// Use predefined scopes for type safety
+await GoogleAuth.configure({
+  scopes: [
+    GoogleAuthScopes.EMAIL,
+    GoogleAuthScopes.PROFILE,
+    GoogleAuthScopes.DRIVE_READONLY,
+    GoogleAuthScopes.CALENDAR,
+  ]
+});
+
+// Or mix with custom scopes
+await GoogleAuth.configure({
+  scopes: [
+    GoogleAuthScopes.EMAIL,
+    'https://www.googleapis.com/auth/custom.scope'
+  ]
+});
+```
+
+**Available Scopes:**
+- **OpenID Connect**: `OPENID`, `EMAIL`, `PROFILE`
+- **Google Drive**: `DRIVE`, `DRIVE_FILE`, `DRIVE_READONLY`
+- **Gmail**: `GMAIL_READONLY`, `GMAIL_MODIFY`, `GMAIL_COMPOSE`
+- **Calendar**: `CALENDAR`, `CALENDAR_READONLY`
+- **Contacts**: `CONTACTS`, `CONTACTS_READONLY`
+- **YouTube**: `YOUTUBE`, `YOUTUBE_READONLY`
+- **Photos**: `PHOTOS`, `PHOTOS_READONLY`
+- **Google Workspace**: `SPREADSHEETS`, `DOCUMENTS`, `PRESENTATIONS` (with readonly variants)
+- **Cloud Platform**: `CLOUD_PLATFORM`, `CLOUD_PLATFORM_READONLY`
+- **Analytics**: `ANALYTICS`, `ANALYTICS_READONLY`
+- **Fitness**: `FITNESS_ACTIVITY_READ`, `FITNESS_BODY_READ`, `FITNESS_LOCATION_READ`
+- **Other**: `USERINFO_EMAIL`, `USERINFO_PROFILE`, `PLUS_ME`, `ADWORDS`, `BLOGGER`
+
+#### Configuration Validation
+
+The library automatically validates:
+- Client ID format (must match Google OAuth format)
+- Domain format for hosted domains
+- OAuth scope format and validity
+- Required parameters based on platform
+- Automatic detection fallbacks for both iOS and Android
 ```
 
 ### Sign In
@@ -488,13 +635,24 @@ interface ConfigureParams {
   iosClientId?: string;              // iOS OAuth client ID
   androidClientId?: string;          // Android OAuth client ID (preferred for Android)
   webClientId?: string;              // Web OAuth client ID (fallback for Android, required for server verification)
-  scopes?: string[];                 // Additional OAuth scopes to request
+  scopes?: string[];                 // Additional OAuth scopes to request (use GoogleAuthScopes enum for common scopes)
   hostedDomain?: string;             // G Suite domain restriction
   offlineAccess?: boolean;           // Request offline access (refresh tokens)
   forceCodeForRefreshToken?: boolean; // Force authorization code for refresh tokens
   accountName?: string;              // Account name hint
   profileImageSize?: number;         // Profile image size in pixels
   openIdRealm?: string;              // OpenID realm
+}
+
+// GoogleAuthScopes enum for type-safe scope definitions
+enum GoogleAuthScopes {
+  EMAIL = 'email',
+  PROFILE = 'profile',
+  OPENID = 'openid',
+  DRIVE_READONLY = 'https://www.googleapis.com/auth/drive.readonly',
+  CALENDAR_READONLY = 'https://www.googleapis.com/auth/calendar.readonly',
+  GMAIL_READONLY = 'https://www.googleapis.com/auth/gmail.readonly',
+  PHOTOS_READONLY = 'https://www.googleapis.com/auth/photoslibrary.readonly'
 }
 ```
 

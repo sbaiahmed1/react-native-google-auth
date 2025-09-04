@@ -44,6 +44,8 @@ class GoogleAuthModule(reactContext: ReactApplicationContext) :
   private var credentialManager: CredentialManager? = null
   private var webClientId: String? = null
   private var androidClientId: String? = null
+  private var hostedDomain: String? = null
+  private var configuredScopes: List<String>? = null
   private var isConfigured = false
   private val coroutineScope = CoroutineScope(Dispatchers.Main)
   
@@ -119,21 +121,40 @@ class GoogleAuthModule(reactContext: ReactApplicationContext) :
 
   override fun configure(params: ReadableMap, promise: Promise) {
     try {
+      // Extract configuration parameters
       webClientId = params.getString("webClientId")
       androidClientId = params.getString("androidClientId")
+      hostedDomain = params.getString("hostedDomain")
       
-      // Android should prefer androidClientId, but fall back to webClientId
-      val clientId = androidClientId ?: webClientId
+      // Extract and validate scopes
+      val scopesArray = params.getArray("scopes")
+      configuredScopes = scopesArray?.let { array ->
+        (0 until array.size()).mapNotNull { index ->
+          array.getString(index)
+        }
+      }
+      
+      // Validate configuration
+      validateConfiguration()
+      
+      // Get client ID with automatic detection
+      val clientId = getClientId()
       if (clientId == null) {
-        promise.reject("INVALID_CONFIG", "Either androidClientId or webClientId is required")
+        promise.reject("INVALID_CONFIG", "Client ID is required. Please provide androidClientId, webClientId, or ensure google-services.json is properly configured.")
         return
       }
-
+      
+      // Validate and store scopes
+      validateAndStoreScopes()
+      
       credentialManager = CredentialManager.create(reactApplicationContext)
       isConfigured = true
+      
+      Log.d(NAME, "Google Auth configured successfully with client ID: ${maskClientId(clientId)}")
       promise.resolve(null)
     } catch (e: Exception) {
-      promise.reject("CONFIG_ERROR", "Failed to configure Google Auth: " + (e.localizedMessage ?: "Unknown error"), e)
+      Log.e(NAME, "Configuration failed: ${e.localizedMessage ?: "Unknown error"}")
+      promise.reject("CONFIG_ERROR", "Failed to configure Google Auth: ${e.localizedMessage ?: "Unknown error"}", e)
     }
   }
 
@@ -424,8 +445,133 @@ class GoogleAuthModule(reactContext: ReactApplicationContext) :
     }
   }
   
-  private fun getClientId(): String {
-    return androidClientId ?: webClientId ?: throw IllegalStateException("No client ID configured")
+  // MARK: - Configuration Helper Methods
+  
+  private fun validateConfiguration() {
+    // Validate hosted domain format if provided
+    hostedDomain?.let { domain ->
+      if (!isValidDomainFormat(domain)) {
+        throw IllegalArgumentException("Invalid hosted domain format: $domain. Must be a valid domain name.")
+      }
+    }
+    
+    // Validate client IDs format if provided
+    androidClientId?.let { clientId ->
+      if (!isValidClientIdFormat(clientId)) {
+        throw IllegalArgumentException("Invalid Android client ID format: ${maskClientId(clientId)}")
+      }
+    }
+    
+    webClientId?.let { clientId ->
+      if (!isValidClientIdFormat(clientId)) {
+        throw IllegalArgumentException("Invalid web client ID format: ${maskClientId(clientId)}")
+      }
+    }
+  }
+  
+  private fun getClientId(): String? {
+    // Priority: androidClientId > webClientId > google-services.json
+    return androidClientId ?: webClientId ?: getClientIdFromGoogleServices()
+  }
+  
+  private fun getClientIdFromGoogleServices(): String? {
+    return try {
+      val resourceId = reactApplicationContext.resources.getIdentifier(
+        "google_services_json", "raw", reactApplicationContext.packageName
+      )
+      
+      if (resourceId != 0) {
+        val inputStream = reactApplicationContext.resources.openRawResource(resourceId)
+        val jsonString = inputStream.bufferedReader().use { it.readText() }
+        val jsonObject = JSONObject(jsonString)
+        
+        // Extract client ID from google-services.json structure
+        val clientArray = jsonObject.getJSONArray("client")
+        for (i in 0 until clientArray.length()) {
+          val client = clientArray.getJSONObject(i)
+          val oauthClient = client.getJSONObject("oauth_client")
+          val oauthClientArray = oauthClient.getJSONArray("oauth_client")
+          
+          for (j in 0 until oauthClientArray.length()) {
+            val oauthClientItem = oauthClientArray.getJSONObject(j)
+            val clientType = oauthClientItem.getInt("client_type")
+            
+            // client_type 1 is for web client, 3 is for Android
+            if (clientType == 1 || clientType == 3) {
+              val clientId = oauthClientItem.getString("client_id")
+              Log.d(NAME, "Found client ID in google-services.json: ${maskClientId(clientId)}")
+              return clientId
+            }
+          }
+        }
+      }
+      
+      Log.w(NAME, "No suitable client ID found in google-services.json")
+      null
+    } catch (e: Exception) {
+      Log.w(NAME, "Failed to read client ID from google-services.json: ${e.localizedMessage}")
+      null
+    }
+  }
+  
+  private fun validateAndStoreScopes() {
+    configuredScopes?.forEach { scope ->
+      if (!isValidScopeFormat(scope)) {
+        throw IllegalArgumentException("Invalid OAuth scope format: $scope")
+      }
+    }
+  }
+  
+  private fun isValidClientIdFormat(clientId: String): Boolean {
+    // Google OAuth client IDs typically end with .googleusercontent.com
+    return clientId.matches(Regex("^[0-9]+-[a-zA-Z0-9_]+\\.apps\\.googleusercontent\\.com$"))
+  }
+  
+  private fun isValidDomainFormat(domain: String): Boolean {
+    // Basic domain validation
+    return domain.matches(Regex("^[a-zA-Z0-9][a-zA-Z0-9-]{0,61}[a-zA-Z0-9]?\\.[a-zA-Z]{2,}$"))
+  }
+  
+  private fun isValidScopeFormat(scope: String): Boolean {
+    // Validate OAuth scope format
+    return scope.matches(Regex("^https://www\\.googleapis\\.com/auth/[a-zA-Z0-9._-]+$")) ||
+           scope in listOf("openid", "email", "profile")
+  }
+  
+  private fun maskClientId(clientId: String): String {
+    return if (clientId.length > 10) {
+      "${clientId.take(6)}...${clientId.takeLast(4)}"
+    } else {
+      "***"
+    }
+  }
+  
+  private fun getDetailedErrorMessage(exception: GetCredentialCustomException): String {
+    return when (exception.type) {
+      "android.credentials.GetCredentialException.TYPE_USER_CANCELED" -> 
+        "Sign-in was canceled by the user. Please try again."
+      "android.credentials.GetCredentialException.TYPE_NO_CREDENTIAL" -> 
+        "No Google account found on this device. Please add a Google account in device settings."
+      "android.credentials.GetCredentialException.TYPE_INTERRUPTED" -> 
+        "Sign-in was interrupted. Please try again."
+      "android.credentials.GetCredentialException.TYPE_UNKNOWN" -> 
+        "An unknown error occurred during sign-in. Please check your network connection and try again."
+      else -> {
+        val message = exception.localizedMessage ?: "Unknown error"
+        when {
+          message.contains("DEVELOPER_ERROR", ignoreCase = true) -> 
+            "Developer console configuration error. Please verify your OAuth 2.0 Client ID configuration in Google Cloud Console and ensure the SHA-1 fingerprint is correctly added."
+          message.contains("NETWORK_ERROR", ignoreCase = true) -> 
+            "Network error occurred. Please check your internet connection and try again."
+          message.contains("INTERNAL_ERROR", ignoreCase = true) -> 
+            "Internal Google services error. Please try again later."
+          message.contains("INVALID_ACCOUNT", ignoreCase = true) -> 
+            "Invalid Google account. Please try with a different account."
+          else -> 
+            "Sign-in failed: $message. Please check your configuration and try again."
+        }
+      }
+    }
   }
   
   private fun isRetryableError(exception: Exception): Boolean {
@@ -507,8 +653,9 @@ class GoogleAuthModule(reactContext: ReactApplicationContext) :
     return withContext(Dispatchers.IO) {
       try {
         executeWithRetry(maxRetries = 2, operationName = "silent sign-in") {
+          val clientId = getClientId() ?: throw IllegalStateException("No client ID available")
           val googleIdOption = GetGoogleIdOption.Builder()
-            .setServerClientId(getClientId())
+            .setServerClientId(clientId)
             .setFilterByAuthorizedAccounts(true) // Only show accounts that have previously signed in
             .build()
 
@@ -535,8 +682,20 @@ class GoogleAuthModule(reactContext: ReactApplicationContext) :
     return withContext(Dispatchers.IO) {
       try {
         executeWithRetry(maxRetries = 1, operationName = "interactive sign-in") {
-          val signInWithGoogleOption = GetSignInWithGoogleOption.Builder(getClientId())
-            .build()
+          val clientId = getClientId() ?: throw IllegalStateException("No client ID available")
+          
+          val signInWithGoogleOptionBuilder = GetSignInWithGoogleOption.Builder(clientId)
+          
+          // Add hosted domain if configured
+          hostedDomain?.let { domain ->
+            signInWithGoogleOptionBuilder.setHostedDomainFilter(domain)
+          }
+          
+          // Note: GetSignInWithGoogleOption.Builder does not support setting scopes directly
+          // Scopes are handled through the Google ID token and OAuth flow
+          // The configured scopes are validated but not used in the Credential Manager API
+          
+          val signInWithGoogleOption = signInWithGoogleOptionBuilder.build()
 
           val request = GetCredentialRequest.Builder()
             .addCredentialOption(signInWithGoogleOption)
@@ -555,7 +714,7 @@ class GoogleAuthModule(reactContext: ReactApplicationContext) :
         
         return@withContext Arguments.createMap().apply {
           putString("type", "configuration_error")
-          putString("message", "Developer console is not set up correctly. Please verify your OAuth 2.0 Client ID configuration in Google Cloud Console and ensure the SHA-1 fingerprint is correctly added.")
+          putString("message", getDetailedErrorMessage(e))
           putString("errorCode", e.type)
         }
       } catch (e: GetCredentialCancellationException) {
