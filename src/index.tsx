@@ -10,6 +10,7 @@ import type {
   RefreshTokensResponse,
   PlayServicesInfo,
 } from './NativeGoogleAuth';
+import { GoogleAuthScopes } from './NativeGoogleAuth';
 import { GoogleAuthErrorCodes, createErrorResponse } from './errors';
 
 // Error handling wrapper
@@ -94,6 +95,9 @@ export {
   mapNativeErrorCode,
 } from './errors';
 export type { GoogleAuthErrorCode, GoogleAuthStatusCode } from './errors';
+
+// Export GoogleAuthScopes enum
+export { GoogleAuthScopes };
 
 /**
  * Google Auth API
