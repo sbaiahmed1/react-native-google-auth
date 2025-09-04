@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import {
   GoogleAuth,
+  GoogleAuthScopes,
   type User,
   type GetTokensResponse,
   type PlayServicesInfo,
@@ -31,6 +32,11 @@ const TokenRefreshExample: React.FC = () => {
           '113079111701-d5prah7tuib9jt47g1t948v9kn38l3gh.apps.googleusercontent.com',
         androidClientId:
           '113079111701-d91tmclfhambj5f0ul3fk5t81opa6o79.apps.googleusercontent.com', // Android OAuth client ID
+        scopes: [
+          GoogleAuthScopes.EMAIL,
+          GoogleAuthScopes.PROFILE,
+          // GoogleAuthScopes.DRIVE_READONLY, // Example: Request read-only access to Google Drive
+        ],
       });
       setIsConfigured(true);
       checkCurrentUser();
