@@ -1,21 +1,80 @@
-# react-native-google-auth
+# React Native Google Authentication Library | Modern Google Sign-In SDK
+
+[![npm version](https://badge.fury.io/js/react-native-google-auth.svg)](https://badge.fury.io/js/react-native-google-auth)
+[![npm downloads](https://img.shields.io/npm/dm/react-native-google-auth.svg)](https://www.npmjs.com/package/react-native-google-auth)
+[![GitHub stars](https://img.shields.io/github/stars/sbaiahmed1/react-native-google-auth.svg)](https://github.com/sbaiahmed1/react-native-google-auth/stargazers)
 
 > ⚠️ **Development Status**: This library is currently in active development. While core functionality is implemented and working, some features may still be under development or subject to change. Please use with caution in production environments.
 
-A modern React Native Google Authentication library using the latest Google Sign-In SDK for iOS and Android Credential Manager for Android.
+**react-native-google-auth** is a comprehensive React Native Google Authentication library that provides seamless Google Sign-In integration for iOS and Android applications. Built with modern APIs including Google Sign-In SDK for iOS and Android Credential Manager, this library offers the most up-to-date Google authentication solution for React Native developers.
 
-## Features
+## Why Choose react-native-google-auth?
 
-- ✅ **Modern APIs**: Uses Google Sign-In SDK for iOS and Android Credential Manager (not deprecated GoogleSignIn)
-- ✅ **TypeScript Support**: Full TypeScript definitions included
-- ✅ **Cross-platform**: Works on both iOS and Android
-- ✅ **Easy Setup**: Simple configuration and usage
-- ✅ **Error Handling**: Comprehensive error codes and messages
+This React Native Google Sign-In library stands out from other Google authentication solutions by leveraging the latest Google APIs and providing a unified, type-safe interface for both iOS and Android platforms. Perfect for developers looking to implement Google OAuth, Google Login, or Google SSO in their React Native mobile applications.
 
-## Installation
+## Key Features & Benefits
 
-```sh
+### 🚀 Modern Google Authentication APIs
+- ✅ **Latest Google Sign-In SDK**: Uses Google Sign-In SDK for iOS and Android Credential Manager (not deprecated GoogleSignIn)
+- ✅ **Google One Tap Sign-In**: Seamless authentication experience with saved credentials
+- ✅ **OAuth 2.0 Compliant**: Full OAuth 2.0 and OpenID Connect support
+- ✅ **Token Management**: Automatic token refresh and expiration handling
+
+### 💻 Developer Experience
+- ✅ **Full TypeScript Support**: Complete TypeScript definitions and IntelliSense
+- ✅ **Cross-Platform Compatibility**: Works seamlessly on both iOS and Android
+- ✅ **Zero Configuration**: Minimal setup required with sensible defaults
+- ✅ **Comprehensive Documentation**: Detailed guides and API reference
+
+### 🔒 Security & Reliability
+- ✅ **Secure Token Storage**: Secure credential storage using platform keychain
+- ✅ **Error Handling**: Comprehensive error codes and user-friendly messages
+- ✅ **Production Ready**: Battle-tested authentication flows
+- ✅ **Google Play Services**: Automatic Google Play Services availability checking
+
+### 🎯 Use Cases
+- **React Native Google Login**: Implement Google sign-in in React Native apps
+- **Mobile OAuth Authentication**: Secure user authentication for mobile apps
+- **Social Login Integration**: Add Google as a social login provider
+- **Enterprise SSO**: Single Sign-On for enterprise applications
+- **User Profile Management**: Access Google user profile information
+
+## Installation & Setup Guide
+
+### NPM Installation
+
+Install the React Native Google Authentication library using your preferred package manager:
+
+```bash
+# Using Yarn (Recommended)
 yarn add react-native-google-auth
+
+# Using NPM
+npm install react-native-google-auth
+
+# Using pnpm
+pnpm add react-native-google-auth
+```
+
+### Quick Start
+
+Get started with Google Sign-In in your React Native app in just 3 steps:
+
+1. **Install the package** (see above)
+2. **Configure your Google OAuth credentials** (see setup guides below)
+3. **Initialize and use** the authentication methods
+
+```typescript
+import { GoogleAuth } from 'react-native-google-auth';
+
+// Configure once in your app
+await GoogleAuth.configure({
+  iosClientId: 'YOUR_IOS_CLIENT_ID',
+  androidClientId: 'YOUR_ANDROID_CLIENT_ID'
+});
+
+// Sign in users
+const response = await GoogleAuth.signIn();
 ```
 
 ### iOS Setup
@@ -522,6 +581,191 @@ NETWORK_ERROR          // Network connection error
 
 // Implementation errors
 NOT_IMPLEMENTED        // Feature not implemented
+```
+
+## Troubleshooting & FAQ
+
+### Common Issues and Solutions
+
+#### 🔧 Configuration Issues
+
+**Q: "Google Auth not configured" error**
+```typescript
+// ❌ Wrong - calling signIn before configure
+await GoogleAuth.signIn();
+
+// ✅ Correct - configure first
+await GoogleAuth.configure({
+  iosClientId: 'YOUR_IOS_CLIENT_ID',
+  androidClientId: 'YOUR_ANDROID_CLIENT_ID'
+});
+await GoogleAuth.signIn();
+```
+
+**Q: Invalid configuration parameters**
+- Ensure client IDs are correct and match your Google Cloud Console setup
+- Verify bundle ID (iOS) and package name (Android) match your app configuration
+- Check that OAuth consent screen is properly configured
+
+#### 📱 Platform-Specific Issues
+
+**iOS Issues:**
+- **"No view controller available"**: Ensure you're calling Google Auth methods from the main thread
+- **"Invalid client ID"**: Verify your iOS client ID in Google Cloud Console
+- **App crashes on sign-in**: Check if you've added the URL scheme to `Info.plist`
+
+**Android Issues:**
+- **"Play Services not available"**: User needs to update Google Play Services
+- **"No activity available"**: Ensure you're calling from a valid React Native context
+- **SHA-1 fingerprint issues**: Verify your app's SHA-1 fingerprint is added to Google Cloud Console
+
+#### 🔐 Authentication Flow Issues
+
+**Q: Sign-in cancelled by user**
+```typescript
+try {
+  const result = await GoogleAuth.signIn();
+  if (result.type === 'cancelled') {
+    console.log('User cancelled sign-in');
+    // Handle cancellation gracefully
+  }
+} catch (error) {
+  if (error.code === GoogleAuthErrorCodes.SIGN_IN_CANCELLED) {
+    // User cancelled the sign-in flow
+  }
+}
+```
+
+**Q: Token expired errors**
+```typescript
+// Check token expiration before making API calls
+const isExpired = await GoogleAuth.isTokenExpired();
+if (isExpired) {
+  await GoogleAuth.refreshTokens();
+}
+```
+
+#### 🌐 Network and Connectivity
+
+**Q: Network errors during sign-in**
+- Check internet connectivity
+- Verify Google services are not blocked by firewall
+- Ensure proper DNS resolution
+
+**Q: "NETWORK_ERROR" when signing in**
+```typescript
+try {
+  await GoogleAuth.signIn();
+} catch (error) {
+  if (error.code === GoogleAuthErrorCodes.NETWORK_ERROR) {
+    // Show user-friendly network error message
+    Alert.alert('Network Error', 'Please check your internet connection');
+  }
+}
+```
+
+### Frequently Asked Questions
+
+#### General Questions
+
+**Q: How do I get Google Client IDs?**
+1. Go to [Google Cloud Console](https://console.cloud.google.com/)
+2. Create or select a project
+3. Enable Google Sign-In API
+4. Create OAuth 2.0 credentials
+5. Configure OAuth consent screen
+
+**Q: What's the difference between iOS and Android Client IDs?**
+- **iOS Client ID**: For iOS app authentication
+- **Android Client ID**: For Android app authentication
+
+#### Security Questions
+
+**Q: How are tokens stored securely?**
+- iOS: Stored in iOS Keychain
+- Android: Stored using Android Keystore
+- Tokens are encrypted and tied to your app's signature
+
+**Q: How do I verify tokens on my server?**
+```typescript
+// Get ID token for server verification
+const tokens = await GoogleAuth.getTokens();
+const idToken = tokens.idToken;
+
+// Send to your server for verification
+fetch('/api/verify-google-token', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ idToken })
+});
+```
+
+#### Development Questions
+
+**Q: Can I test without Google Play Services?**
+- iOS: Yes, works on simulator and device
+- Android: Requires Google Play Services or use emulator with Google APIs
+
+**Q: How do I handle different environments (dev/staging/prod)?**
+```typescript
+const config = {
+  iosClientId: __DEV__ ? 'DEV_IOS_CLIENT_ID' : 'PROD_IOS_CLIENT_ID',
+  androidClientId: __DEV__ ? 'DEV_ANDROID_CLIENT_ID' : 'PROD_ANDROID_CLIENT_ID'
+};
+await GoogleAuth.configure(config);
+```
+
+### Performance Optimization
+
+#### Best Practices
+
+1. **Configure once**: Call `configure()` only once in your app lifecycle
+2. **Check token expiration**: Verify tokens before API calls
+3. **Handle errors gracefully**: Provide user-friendly error messages
+4. **Cache user data**: Store user info locally to reduce API calls
+
+#### Memory Management
+
+```typescript
+// Good: Check if already configured
+if (!GoogleAuth.isConfigured) {
+  await GoogleAuth.configure(config);
+}
+
+// Good: Cleanup on app exit
+const handleAppExit = async () => {
+  await GoogleAuth.signOut();
+};
+```
+
+### Migration Guide
+
+#### From @react-native-google-signin/google-signin
+
+```typescript
+// Old library
+import { GoogleSignin } from '@react-native-google-signin/google-signin';
+
+// New library
+import { GoogleAuth } from 'react-native-google-auth';
+
+// Configuration changes
+// Old:
+GoogleSignin.configure({ webClientId: 'CLIENT_ID' });
+// New:
+GoogleAuth.configure({ 
+  iosClientId: 'IOS_CLIENT_ID',
+  androidClientId: 'ANDROID_CLIENT_ID' 
+});
+
+// Method changes
+// Old:
+const userInfo = await GoogleSignin.signIn();
+// New:
+const response = await GoogleAuth.signIn();
+if (response.type === 'success') {
+  const userInfo = response.data.user;
+}
 ```
 
 ## Important Notes

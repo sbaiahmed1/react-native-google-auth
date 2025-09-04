@@ -1,8 +1,60 @@
-# Contributing
+# Contributing to react-native-google-auth
 
-Contributions are always welcome, no matter how large or small!
+Welcome to the **react-native-google-auth** community! We're excited that you want to contribute to our React Native Google Authentication library. Whether you're fixing bugs, adding features, improving documentation, or helping with testing, every contribution makes this Google Sign-In library better for developers worldwide.
 
-We want this community to be friendly and respectful to each other. Please follow it in all your interactions with the project. Before contributing, please read the [code of conduct](./CODE_OF_CONDUCT.md).
+## Why Contribute?
+
+- **Impact**: Help thousands of React Native developers implement Google OAuth authentication
+- **Learning**: Gain experience with Google Sign-In APIs, OAuth 2.0, and React Native
+- **Community**: Join a growing community of mobile authentication experts
+- **Recognition**: Get credited for your contributions to open source
+
+We want this community to be friendly and respectful to each other. Please follow our guidelines in all your interactions with the project. Before contributing, please read the [code of conduct](./CODE_OF_CONDUCT.md).
+
+## Table of Contents
+
+- [Quick Start for Contributors](#development-workflow)
+- [Types of Contributions](#types-of-contributions)
+- [Development Workflow](#development-workflow)
+- [Testing Guidelines](#testing-guidelines)
+- [Code Standards](#linting-and-tests)
+- [Commit Guidelines](#commit-message-convention)
+- [Pull Request Process](#sending-a-pull-request)
+- [Release Process](#publishing-to-npm)
+
+## Types of Contributions
+
+We welcome various types of contributions to improve React Native Google authentication:
+
+### 🐛 Bug Fixes
+- Fix Google Sign-In authentication issues
+- Resolve iOS/Android platform-specific problems
+- Fix token refresh and management bugs
+- Address Google Play Services compatibility issues
+
+### ✨ New Features
+- Add new Google authentication methods
+- Implement Google One Tap Sign-In enhancements
+- Add support for additional Google APIs
+- Improve OAuth 2.0 and OpenID Connect features
+
+### 📚 Documentation
+- Improve installation and setup guides
+- Add code examples and tutorials
+- Create troubleshooting guides
+- Enhance API reference documentation
+
+### 🧪 Testing
+- Add unit tests for authentication flows
+- Create integration tests for iOS/Android
+- Add E2E tests for complete sign-in processes
+- Improve test coverage for edge cases
+
+### 🚀 Performance
+- Optimize authentication performance
+- Reduce bundle size
+- Improve memory usage
+- Enhance startup time
 
 ## Development workflow
 

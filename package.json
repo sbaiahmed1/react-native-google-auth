@@ -1,7 +1,7 @@
 {
   "name": "react-native-google-auth",
   "version": "0.1.1",
-  "description": "Modern React Native Google Authentication library with TypeScript support, token management, and cross-platform compatibility for iOS and Android (SWG Credential manager).",
+  "description": "🚀 Modern React Native Google Authentication library with TypeScript support. Features latest Google Sign-In SDK, OAuth 2.0, One Tap Sign-In, token management, and cross-platform iOS/Android integration. Perfect for implementing Google Login, Google SSO, and Google OAuth in React Native apps.",
   "main": "./lib/module/index.js",
   "types": "./lib/typescript/src/index.d.ts",
   "exports": {
@@ -42,8 +42,30 @@
   },
   "keywords": [
     "react-native",
+    "google-auth",
+    "google-signin",
+    "google-login",
+    "google-oauth",
+    "google-sso",
+    "authentication",
+    "oauth2",
+    "openid-connect",
+    "social-login",
+    "credential-manager",
+    "one-tap-signin",
     "ios",
-    "android"
+    "android",
+    "typescript",
+    "cross-platform",
+    "mobile-auth",
+    "google-identity",
+    "react-native-auth",
+    "google-api",
+    "signin-sdk",
+    "mobile-oauth",
+    "user-authentication",
+    "google-services",
+    "react-native-google"
   ],
   "repository": {
     "type": "git",
