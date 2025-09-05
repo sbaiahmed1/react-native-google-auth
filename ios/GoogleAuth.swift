@@ -375,10 +375,10 @@ class GoogleAuth: NSObject {
     
     private func isValidScopeFormat(_ scope: String) -> Bool {
         // Validate OAuth 2.0 scope format
-        return scope.hasPrefix("https://www.googleapis.com/auth/") || 
-               scope.hasPrefix("openid") || 
-               scope.hasPrefix("email") || 
-               scope.hasPrefix("profile")
+        return scope.hasPrefix("https://www.googleapis.com/auth/") ||
+               scope == "openid" ||
+               scope == "email" ||
+               scope == "profile"
     }
     
     private func maskClientId(_ clientId: String) -> String {

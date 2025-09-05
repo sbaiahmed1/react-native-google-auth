@@ -129,9 +129,19 @@ class GoogleAuthModule(reactContext: ReactApplicationContext) :
       // Extract and validate scopes
       val scopesArray = params.getArray("scopes")
       configuredScopes = scopesArray?.let { array ->
-        (0 until array.size()).mapNotNull { index ->
-          array.getString(index)
+        val scopesList = mutableListOf<String>()
+        for (index in 0 until array.size()) {
+          val value = array.getDynamic(index)
+          if (value != null && value.type == com.facebook.react.bridge.ReadableType.String) {
+            scopesList.add(value.asString())
+          } else {
+            android.util.Log.w(
+              "GoogleAuthModule",
+              "Invalid scope value at index $index: ${value?.toString() ?: "null"} (expected String)"
+            )
+          }
         }
+        scopesList
       }
       
       // Validate configuration
@@ -480,25 +490,35 @@ class GoogleAuthModule(reactContext: ReactApplicationContext) :
         "google_services_json", "raw", reactApplicationContext.packageName
       )
       
-      if (resourceId != 0) {
-        val inputStream = reactApplicationContext.resources.openRawResource(resourceId)
-        val jsonString = inputStream.bufferedReader().use { it.readText() }
-        val jsonObject = JSONObject(jsonString)
+      if (resourceId == 0) {
+        // google-services.json not found
+        return null
+      }
+      
+      val inputStream = reactApplicationContext.resources.openRawResource(resourceId)
+      val jsonString = inputStream.bufferedReader().use { it.readText() }
+      val jsonObject = JSONObject(jsonString)
+      
+      // Extract client ID robustly from google-services.json structure
+      val clientArray = jsonObject.optJSONArray("client")
+      if (clientArray == null || clientArray.length() == 0) {
+        Log.w(NAME, "No client array found in google-services.json")
+        return null
+      }
+      
+      for (i in 0 until clientArray.length()) {
+        val client = clientArray.optJSONObject(i) ?: continue
+        val oauthClient = client.optJSONObject("oauth_client") ?: continue
+        val oauthClientArray = oauthClient.optJSONArray("oauth_client") ?: continue
         
-        // Extract client ID from google-services.json structure
-        val clientArray = jsonObject.getJSONArray("client")
-        for (i in 0 until clientArray.length()) {
-          val client = clientArray.getJSONObject(i)
-          val oauthClient = client.getJSONObject("oauth_client")
-          val oauthClientArray = oauthClient.getJSONArray("oauth_client")
+        for (j in 0 until oauthClientArray.length()) {
+          val oauthClientItem = oauthClientArray.optJSONObject(j) ?: continue
+          val clientType = oauthClientItem.optInt("client_type", -1)
           
-          for (j in 0 until oauthClientArray.length()) {
-            val oauthClientItem = oauthClientArray.getJSONObject(j)
-            val clientType = oauthClientItem.getInt("client_type")
-            
-            // client_type 1 is for web client, 3 is for Android
-            if (clientType == 1 || clientType == 3) {
-              val clientId = oauthClientItem.getString("client_id")
+          // client_type 1 is for web client, 3 is for Android
+          if (clientType == 1 || clientType == 3) {
+            val clientId = oauthClientItem.optString("client_id")
+            if (clientId.isNotEmpty()) {
               Log.d(NAME, "Found client ID in google-services.json: ${maskClientId(clientId)}")
               return clientId
             }
