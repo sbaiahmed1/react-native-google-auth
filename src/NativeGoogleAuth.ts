@@ -144,13 +144,13 @@ export type OneTapResponse =
 
 export interface GetTokensResponse {
   idToken: string;
-  accessToken: string;
+  accessToken: string | null; // null on Android due to Credential Manager API limitations
   expiresAt?: number; // Unix timestamp when token expires
 }
 
 export interface RefreshTokensResponse {
   idToken: string;
-  accessToken: string;
+  accessToken: string | null; // null on Android due to Credential Manager API limitations
   expiresAt?: number;
 }
 

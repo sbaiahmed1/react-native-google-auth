@@ -774,7 +774,8 @@ class GoogleAuthModule(reactContext: ReactApplicationContext) :
             val cachedUser = Arguments.createMap().apply {
               putString("id", googleIdTokenCredential.id)
               putString("name", googleIdTokenCredential.displayName)
-              putString("email", googleIdTokenCredential.id) // Email is typically the ID
+              // Use actual email from ID token, not the ID field
+              putString("email", extractEmailFromIdToken(googleIdTokenCredential.idToken) ?: googleIdTokenCredential.id)
               putString("photo", googleIdTokenCredential.profilePictureUri?.toString())
               putString("familyName", googleIdTokenCredential.familyName)
               putString("givenName", googleIdTokenCredential.givenName)
@@ -792,7 +793,8 @@ class GoogleAuthModule(reactContext: ReactApplicationContext) :
           val responseUser = Arguments.createMap().apply {
             putString("id", googleIdTokenCredential.id)
             putString("name", googleIdTokenCredential.displayName)
-            putString("email", googleIdTokenCredential.id) // Email is typically the ID
+            // Use actual email from ID token, not the ID field
+            putString("email", extractEmailFromIdToken(googleIdTokenCredential.idToken) ?: googleIdTokenCredential.id)
             putString("photo", googleIdTokenCredential.profilePictureUri?.toString())
             putString("familyName", googleIdTokenCredential.familyName)
             putString("givenName", googleIdTokenCredential.givenName)
@@ -832,6 +834,20 @@ class GoogleAuthModule(reactContext: ReactApplicationContext) :
     } catch (e: Exception) {
       Log.w(NAME, "Failed to parse token expiration: " + (e.localizedMessage ?: "Unknown error"))
     }
+  }
+
+  private fun extractEmailFromIdToken(idToken: String): String? {
+    try {
+      val parts = idToken.split(".")
+      if (parts.size >= 2) {
+        val payload = String(Base64.getUrlDecoder().decode(parts[1]))
+        val json = JSONObject(payload)
+        return json.optString("email", null)
+      }
+    } catch (e: Exception) {
+      Log.w(NAME, "Failed to extract email from ID token: " + (e.localizedMessage ?: "Unknown error"))
+    }
+    return null
   }
 
   // MARK: - Secure Credential Storage

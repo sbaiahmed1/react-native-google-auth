@@ -678,20 +678,32 @@ type OneTapResponse =
   | { type: 'cancelled' };
 ```
 
+**Platform Differences:**
+- **iOS**: Returns both `idToken` and `accessToken` when available
+- **Android**: Returns `idToken` but `accessToken` is always `null` due to Credential Manager API limitations <mcreference link="https://developers.google.com/identity/android-credential-manager" index="4">4</mcreference>
+
+> **Note**: Android's Credential Manager API focuses on authentication (ID tokens) rather than authorization (access tokens). <mcreference link="https://developers.google.com/identity/protocols/oauth2" index="1">1</mcreference> If you need access tokens on Android for API calls, consider implementing a separate OAuth2 flow or use the ID token for server-side token exchange.
+```
+
 ### Tokens Response
 
 ```typescript
 interface GetTokensResponse {
   idToken: string;       // OpenID Connect ID token
-  accessToken: string;   // OAuth access token
+  accessToken: string;   // OAuth access token (null on Android)
   expiresAt?: number;    // Unix timestamp when token expires
 }
 
 interface RefreshTokensResponse {
   idToken: string;       // Refreshed OpenID Connect ID token
-  accessToken: string;   // Refreshed OAuth access token
+  accessToken: string;   // Refreshed OAuth access token (null on Android)
   expiresAt?: number;    // Unix timestamp when token expires
 }
+```
+
+**Platform Differences:**
+- **iOS**: Returns both `idToken` and `accessToken`
+- **Android**: Returns `idToken` but `accessToken` is always `null` due to Credential Manager API limitations <mcreference link="https://developers.google.com/identity/android-credential-manager" index="4">4</mcreference>
 ```
 
 ### Play Services Response
@@ -702,6 +714,50 @@ interface PlayServicesInfo {
   status?: number;       // Play Services status code (Android only)
 }
 ```
+
+**Platform Differences:**
+- **iOS**: Always returns `{ isAvailable: true }` since iOS doesn't require Google Play Services
+- **Android**: Performs actual Google Play Services availability check and returns status code
+
+> **Note**: The `showErrorDialog` parameter only affects Android. On iOS, this parameter is ignored since no actual checking is performed.
+
+## Token Lifecycle Management
+
+### Token Storage and Persistence
+
+**iOS Implementation:**
+- Uses GoogleSignIn SDK's built-in token management
+- Tokens are automatically stored in iOS Keychain by the SDK
+- No manual token persistence required
+- Automatic token refresh handled by `GIDSignIn.sharedInstance.currentUser.refreshTokensIfNeeded()`
+
+**Android Implementation:**
+- Uses encrypted SharedPreferences for secure token storage
+- Manual token caching with thread-safe synchronization
+- Implements custom secure storage using `EncryptedSharedPreferences` with AES256 encryption
+- Token expiration tracking with Unix timestamps
+
+### Token Refresh Behavior
+
+**iOS:**
+- Automatic refresh through GoogleSignIn SDK
+- Returns both `idToken` and `accessToken` after refresh
+- Built-in expiration checking via `user.accessToken.expirationDate`
+
+**Android:**
+- Manual refresh by performing silent sign-in with Credential Manager
+- Returns `idToken` only (`accessToken` is always `null`)
+- Custom expiration tracking based on ID token payload parsing
+
+### Platform Differences Summary
+
+| Feature | iOS | Android |
+|---------|-----|----------|
+| Token Storage | iOS Keychain (automatic) | Encrypted SharedPreferences (manual) |
+| Access Token | Available | Always `null` |
+| Token Refresh | Automatic via SDK | Silent sign-in required |
+| Expiration Check | SDK-provided | Custom implementation |
+| Persistence | Handled by SDK | Manual secure storage |
 
 ### Error Codes
 

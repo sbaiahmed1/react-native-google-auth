@@ -47,6 +47,13 @@ export const GoogleAuthErrorCodes = {
 
   // Implementation errors
   NOT_IMPLEMENTED: 'NOT_IMPLEMENTED',
+
+  // Additional platform-specific error codes
+  SIGN_OUT_ERROR: 'SIGN_OUT_ERROR',
+  GET_TOKENS_ERROR: 'GET_TOKENS_ERROR',
+  REFRESH_ERROR: 'REFRESH_ERROR',
+  REFRESH_FAILED: 'REFRESH_FAILED',
+  SIGN_IN_REQUIRED: 'SIGN_IN_REQUIRED',
 } as const;
 
 export type GoogleAuthErrorCode =
@@ -132,16 +139,68 @@ export function createErrorResponse(
  */
 export function mapNativeErrorCode(nativeCode: string): GoogleAuthErrorCode {
   switch (nativeCode) {
+    // User cancellation
     case 'android.credentials.GetCredentialException.TYPE_USER_CANCELED':
     case 'GIDSignInErrorCanceled':
-      return GoogleAuthErrorCodes.SIGN_IN_ERROR;
+      return GoogleAuthErrorCodes.SIGN_IN_CANCELLED;
 
+    // No credential/not signed in
     case 'android.credentials.GetCredentialException.TYPE_NO_CREDENTIAL':
     case 'NoCredentialException':
+    case 'NOT_SIGNED_IN':
       return GoogleAuthErrorCodes.NOT_SIGNED_IN;
 
+    // Configuration errors
+    case 'NOT_CONFIGURED':
+      return GoogleAuthErrorCodes.NOT_CONFIGURED;
+    case 'INVALID_CONFIG':
+      return GoogleAuthErrorCodes.INVALID_CONFIG;
+    case 'CONFIG_ERROR':
+      return GoogleAuthErrorCodes.CONFIG_ERROR;
+
+    // Platform-specific activity/view controller errors
+    case 'NO_ACTIVITY':
+      return GoogleAuthErrorCodes.NO_ACTIVITY;
+    case 'NO_VIEW_CONTROLLER':
+      return GoogleAuthErrorCodes.NO_VIEW_CONTROLLER;
+
+    // Sign-in errors
+    case 'SIGN_IN_ERROR':
+      return GoogleAuthErrorCodes.SIGN_IN_ERROR;
+    case 'SIGN_IN_REQUIRED':
+      return GoogleAuthErrorCodes.SIGN_IN_REQUIRED;
+
+    // Sign-out errors
+    case 'SIGN_OUT_ERROR':
+      return GoogleAuthErrorCodes.SIGN_OUT_ERROR;
+
+    // Token errors
+    case 'TOKEN_ERROR':
+      return GoogleAuthErrorCodes.TOKEN_ERROR;
+    case 'TOKEN_REFRESH_ERROR':
+      return GoogleAuthErrorCodes.TOKEN_REFRESH_ERROR;
+    case 'GET_TOKENS_ERROR':
+      return GoogleAuthErrorCodes.GET_TOKENS_ERROR;
+    case 'REFRESH_ERROR':
+      return GoogleAuthErrorCodes.REFRESH_ERROR;
+    case 'REFRESH_FAILED':
+      return GoogleAuthErrorCodes.REFRESH_FAILED;
+
+    // Play Services errors
     case 'PLAY_SERVICES_NOT_AVAILABLE':
       return GoogleAuthErrorCodes.PLAY_SERVICES_NOT_AVAILABLE;
+    case 'PLAY_SERVICES_ERROR':
+      return GoogleAuthErrorCodes.PLAY_SERVICES_ERROR;
+
+    // Android Credential Manager specific errors
+    case 'android.credentials.GetCredentialException.TYPE_INTERRUPTED':
+      return GoogleAuthErrorCodes.SIGN_IN_ERROR;
+    case 'android.credentials.GetCredentialException.TYPE_UNKNOWN':
+      return GoogleAuthErrorCodes.SIGN_IN_ERROR;
+
+    // Network errors
+    case 'NETWORK_ERROR':
+      return GoogleAuthErrorCodes.NETWORK_ERROR;
 
     default:
       return GoogleAuthErrorCodes.SIGN_IN_ERROR;
