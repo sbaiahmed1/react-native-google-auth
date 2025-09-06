@@ -133,7 +133,15 @@ class GoogleAuthModule(reactContext: ReactApplicationContext) :
         for (index in 0 until array.size()) {
           val value = array.getDynamic(index)
           if (value != null && value.type == com.facebook.react.bridge.ReadableType.String) {
-            scopesList.add(value.asString())
+            val scopeString = value.asString()
+            if (scopeString != null) {
+              scopesList.add(scopeString)
+            } else {
+              android.util.Log.w(
+                "GoogleAuthModule",
+                "Null scope string at index $index"
+              )
+            }
           } else {
             android.util.Log.w(
               "GoogleAuthModule",
