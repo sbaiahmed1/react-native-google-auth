@@ -204,6 +204,237 @@ const response = await GoogleAuth.signIn();
    });
    ```
 
+### Expo Setup (Development Build)
+
+> **Note**: This library requires native code and is **not compatible with Expo Go**. You must use Expo Development Build or eject to a bare React Native project.
+
+#### Prerequisites
+
+- Expo SDK 49+ (recommended)
+- Expo Development Build configured
+
+#### Installation
+
+1. **Install the package:**
+   ```bash
+   npx expo install react-native-google-auth
+   ```
+
+2. **Configure the plugin in your `app.json` or `app.config.js`:**
+
+   The library automatically detects client IDs from your Google configuration files. You have several options:
+
+   **Option 1: Automatic Detection (Recommended)**
+   Place your Google configuration files in your project root:
+   - `google-services.json` (Android)
+   - `GoogleService-Info.plist` (iOS)
+
+   Add the plugin to your `app.json`:
+   ```json
+   {
+     "expo": {
+       "plugins": [
+         "react-native-google-auth"
+       ]
+     }
+   }
+   ```
+
+   Then configure without specifying client IDs:
+   ```javascript
+   await GoogleAuth.configure({
+     scopes: [GoogleAuthScopes.EMAIL, GoogleAuthScopes.PROFILE]
+   });
+   ```
+
+   **Option 2: Manual Configuration**
+   ```javascript
+   await GoogleAuth.configure({
+     iosClientId: 'YOUR_IOS_CLIENT_ID',
+     androidClientId: 'YOUR_ANDROID_CLIENT_ID',
+     scopes: [GoogleAuthScopes.EMAIL, GoogleAuthScopes.PROFILE]
+   });
+   ```
+
+   **Option 3: Environment Variables in app.config.js**
+   ```javascript
+   export default {
+     expo: {
+       plugins: [
+         'react-native-google-auth'
+       ]
+     }
+   };
+   ```
+
+   Then use environment variables in your code:
+   ```javascript
+   await GoogleAuth.configure({
+     iosClientId: process.env.GOOGLE_IOS_CLIENT_ID,
+     androidClientId: process.env.GOOGLE_ANDROID_CLIENT_ID,
+     scopes: [GoogleAuthScopes.EMAIL, GoogleAuthScopes.PROFILE]
+   });
+   ```
+
+#### iOS Configuration
+
+1. **Add your iOS client ID to `app.json`:**
+   ```json
+   {
+     "expo": {
+       "ios": {
+         "infoPlist": {
+           "GIDClientID": "YOUR_IOS_CLIENT_ID"
+         },
+         "bundleIdentifier": "com.yourcompany.yourapp"
+       }
+     }
+   }
+   ```
+
+2. **Configure URL schemes in `app.json`:**
+   ```json
+   {
+     "expo": {
+       "ios": {
+         "scheme": "com.googleusercontent.apps.YOUR_IOS_CLIENT_ID"
+       }
+     }
+   }
+   ```
+   
+   **Note:** Remove `.apps.googleusercontent.com` from your iOS client ID when adding it as a scheme.
+
+#### Android Configuration
+
+1. **Add your `google-services.json` file:**
+   - Download `google-services.json` from Firebase Console
+   - Place it in your project root (same level as `app.json`)
+   - The config plugin will automatically copy it to the correct location
+
+2. **Configure package name in `app.json`:**
+   ```json
+   {
+     "expo": {
+       "android": {
+         "package": "com.yourcompany.yourapp"
+       }
+     }
+   }
+   ```
+
+#### Building Development Build
+
+1. **Create a development build:**
+   ```bash
+   # For iOS
+   eas build --profile development --platform ios
+   
+   # For Android
+   eas build --profile development --platform android
+   
+   # For both platforms
+   eas build --profile development --platform all
+   ```
+
+2. **Install the development build on your device**
+
+3. **Start the development server:**
+   ```bash
+   npx expo start --dev-client
+   ```
+
+#### Usage in Expo
+
+```typescript
+import { GoogleAuth, GoogleAuthScopes } from 'react-native-google-auth';
+import { useEffect } from 'react';
+
+export default function App() {
+  useEffect(() => {
+    configureGoogleAuth();
+  }, []);
+
+  const configureGoogleAuth = async () => {
+    try {
+      await GoogleAuth.configure({
+        // Client IDs are automatically detected from app.json configuration
+        scopes: [GoogleAuthScopes.EMAIL, GoogleAuthScopes.PROFILE]
+      });
+    } catch (error) {
+      console.error('Google Auth configuration failed:', error);
+    }
+  };
+
+  const handleGoogleSignIn = async () => {
+    try {
+      const response = await GoogleAuth.signIn();
+      
+      if (response.type === 'success') {
+        console.log('User signed in:', response.data.user);
+      } else if (response.type === 'cancelled') {
+        console.log('Sign in cancelled');
+      }
+    } catch (error) {
+      console.error('Sign in failed:', error);
+    }
+  };
+
+  // Your app components...
+}
+```
+
+#### Expo Config Plugin Options
+
+The config plugin accepts the following options:
+
+```typescript
+interface GoogleAuthPluginOptions {
+  iosClientId?: string;        // iOS OAuth client ID
+  androidClientId?: string;    // Android OAuth client ID
+  googleServicesFile?: string; // Path to google-services.json (default: './google-services.json')
+}
+```
+
+#### Troubleshooting Expo Issues
+
+**Common Issues:**
+
+1. **"Google Auth not configured" in Expo:**
+   - Ensure you've added the config plugin to `app.json`
+   - Rebuild your development build after adding the plugin
+   - Verify client IDs are correctly set in the plugin configuration
+
+2. **"Invalid client ID" in Expo:**
+   - Check that your bundle identifier (iOS) and package name (Android) match your Google Cloud Console configuration
+   - Ensure you're using the correct client IDs for your platform
+
+3. **Build fails with Google Auth:**
+   - Make sure you're using Expo SDK 49+
+   - Clear your build cache: `eas build --clear-cache`
+   - Verify `google-services.json` is in the project root
+
+4. **Sign-in doesn't work in development build:**
+   - Ensure you're testing on a physical device (not Expo Go)
+   - Check that Google Play Services are installed and updated (Android)
+   - Verify your app's SHA-1 fingerprint is added to Google Cloud Console (Android)
+
+**Getting SHA-1 fingerprint for Expo:**
+```bash
+# For development builds
+eas credentials -p android
+
+# Or manually from keystore
+keytool -list -v -keystore path/to/your/keystore.jks -alias your-key-alias
+```
+
+#### Expo Limitations
+
+- **Expo Go**: Not supported - requires development build
+- **Web**: Not supported - mobile platforms only
+- **Expo Router**: Fully compatible with file-based routing
+- **Expo Updates**: Compatible with OTA updates
+
 ## Getting Client IDs
 
 1. Go to [Google Cloud Console](https://console.cloud.google.com/)
