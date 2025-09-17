@@ -1,0 +1,26 @@
+{
+  "name": "react-native-google-auth-plugin",
+  "version": "1.0.0",
+  "description": "Expo config plugin for react-native-google-auth",
+  "main": "lib/index.js",
+  "types": "lib/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "clean": "rm -rf lib",
+    "prepare": "yarn clean && yarn build"
+  },
+  "dependencies": {
+    "@expo/config-plugins": "^7.0.0",
+    "@expo/config-types": "^50.0.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.0.0"
+  },
+  "peerDependencies": {
+    "expo": "*"
+  },
+  "files": [
+    "lib",
+    "src"
+  ]
+}
