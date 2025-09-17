@@ -12,6 +12,7 @@
     },
     "./package.json": "./package.json"
   },
+  "plugin": "./plugin/lib/index.js",
   "files": [
     "src",
     "lib",
@@ -111,7 +112,8 @@
     "react-native": "*"
   },
   "workspaces": [
-    "example"
+    "example",
+    "plugin"
   ],
   "packageManager": "yarn@3.6.1",
   "jest": {
