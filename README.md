@@ -933,10 +933,8 @@ We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) f
 
 ## 📞 Support
 
-- 📧 Email: support@yourcompany.com
-- 💬 Discord: [Join our community](https://discord.gg/your-discord)
 - 🐛 Issues: [GitHub Issues](https://github.com/sbaiahmed1/react-native-google-auth/issues)
 
 ---
 
-Made with ❤️ by the React Native Google Auth team
+Made with ❤️ by @sbaiahmed1
