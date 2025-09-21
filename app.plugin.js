@@ -1,1 +1,1 @@
-module.exports = require('./plugin/build/withGoogleSignIn');
+module.exports = require('./plugin/build/withGoogleAuth');
