@@ -142,7 +142,7 @@ const getAndroidClientIdFromJson = (
 /**
  * Configure iOS for Google Sign-In
  */
-const withGoogleSignInIOS: ConfigPlugin<Options> = (config, options) => {
+const withGoogleAuthIOS: ConfigPlugin<Options> = (config, options) => {
   return withInfoPlist(config, (iosConfig) => {
     console.log('🍎 Configuring iOS for Google Auth...');
 
@@ -209,7 +209,7 @@ const withGoogleSignInIOS: ConfigPlugin<Options> = (config, options) => {
 /**
  * Configure Android for Google Sign-In
  */
-const withGoogleSignInAndroid: ConfigPlugin<Options> = (config, options) => {
+const withGoogleAuthAndroid: ConfigPlugin<Options> = (config, options) => {
   return withAndroidManifest(config, (androidConfig) => {
     console.log('🤖 Configuring Android manifest for Google Auth...');
 
@@ -274,16 +274,16 @@ const withGoogleSignInAndroid: ConfigPlugin<Options> = (config, options) => {
 /**
  * Google Sign-In configuration without Firebase
  */
-const withGoogleSignInWithoutFirebase: ConfigPlugin<Options> = (
+const withGoogleAuthWithoutFirebase: ConfigPlugin<Options> = (
   config: ExpoConfig,
   options
 ) => {
   validateOptions(options);
   return withPlugins(config, [
     // iOS Configuration
-    (cfg) => withGoogleSignInIOS(cfg, options),
+    (cfg) => withGoogleAuthIOS(cfg, options),
     // Android Configuration
-    (cfg) => withGoogleSignInAndroid(cfg, options),
+    (cfg) => withGoogleAuthAndroid(cfg, options),
   ]);
 };
 
@@ -312,7 +312,7 @@ export const withGoogleUrlScheme: ConfigPlugin<Options> = (config, options) => {
 /**
  * Apply google-signin configuration for Expo SDK 47+ projects. This plugin reads information from the Firebase config file.
  */
-const withGoogleSignIn: ConfigPlugin = (config: ExpoConfig) => {
+const withGoogleAuth: ConfigPlugin = (config: ExpoConfig) => {
   return withPlugins(config, [
     // Android
     AndroidConfig.GoogleServices.withClassPath,
@@ -325,15 +325,15 @@ const withGoogleSignIn: ConfigPlugin = (config: ExpoConfig) => {
   ]);
 };
 
-const withGoogleSignInRoot: ConfigPlugin<Options | void> = (
+const withGoogleAuthRoot: ConfigPlugin<Options | void> = (
   config: ExpoConfig,
   options
 ) => {
   console.log('🚀 Starting React Native Google Auth plugin configuration...');
 
   const result = options
-    ? withGoogleSignInWithoutFirebase(config, options)
-    : withGoogleSignIn(config);
+    ? withGoogleAuthWithoutFirebase(config, options)
+    : withGoogleAuth(config);
 
   console.log(
     '✅ React Native Google Auth plugin configuration completed successfully!'
@@ -343,7 +343,7 @@ const withGoogleSignInRoot: ConfigPlugin<Options | void> = (
 };
 
 export default createRunOncePlugin<Options>(
-  withGoogleSignInRoot,
+  withGoogleAuthRoot,
   pkg.name,
   pkg.version
 );
