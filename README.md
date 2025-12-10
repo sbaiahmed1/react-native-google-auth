@@ -462,6 +462,7 @@ const configure = async () => {
       androidClientId: 'YOUR_ANDROID_CLIENT_ID.apps.googleusercontent.com', // Optional on Android - auto-detected from google-services.json
       webClientId: 'YOUR_WEB_CLIENT_ID.apps.googleusercontent.com', // Optional - for server verification
       hostedDomain: 'yourdomain.com', // Optional - for G Suite domains
+      forceAccountPicker: true, // Optional (iOS only) - always show account picker, even if user is already signed in
       scopes: [ // Optional - additional OAuth scopes
         GoogleAuthScopes.EMAIL,
         GoogleAuthScopes.PROFILE,
@@ -475,6 +476,19 @@ const configure = async () => {
   }
 };
 ```
+
+#### Force Account Picker (iOS)
+
+By default, the library attempts silent sign-in first, which automatically signs in the user with their previously used Google account. To force the account picker to always show (useful when users have multiple Google accounts), use the `forceAccountPicker` option:
+
+```typescript
+await GoogleAuth.configure({
+  iosClientId: 'YOUR_IOS_CLIENT_ID.apps.googleusercontent.com',
+  forceAccountPicker: true, // Always show account picker on iOS
+});
+```
+
+> **Note:** This option only affects iOS. On Android, the Credential Manager API handles account selection automatically.
 
 ### Sign In
 
@@ -614,6 +628,7 @@ interface GoogleAuthConfig {
   webClientId?: string;
   hostedDomain?: string;
   scopes?: string[];
+  forceAccountPicker?: boolean; // iOS only - forces account picker to show even if user is already signed in
 }
 
 interface GoogleAuthResponse {
