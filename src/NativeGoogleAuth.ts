@@ -109,6 +109,15 @@ export interface ConfigureParams {
    * Legacy parameter for specific use cases
    */
   openIdRealm?: string;
+
+  /**
+   * Force the account picker to show even if a user is already signed in
+   * When true, skips silent sign-in and always shows the account selection UI
+   * Useful when you want users to explicitly choose between multiple Google accounts
+   * Default: false
+   * @platform iOS
+   */
+  forceAccountPicker?: boolean;
 }
 
 export interface User {
