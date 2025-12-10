@@ -85,8 +85,8 @@ import { GoogleAuth, GoogleAuthScopes } from 'react-native-google-auth';
 
 // Configure once in your app
 await GoogleAuth.configure({
-  iosClientId: 'YOUR_IOS_CLIENT_ID',
-  androidClientId: 'YOUR_ANDROID_CLIENT_ID',
+  iosClientId: 'YOUR_IOS_CLIENT_ID.apps.googleusercontent.com',
+  androidClientId: 'YOUR_WEB_CLIENT_ID.apps.googleusercontent.com', // Use Web OAuth client ID for Android
   scopes: [GoogleAuthScopes.EMAIL, GoogleAuthScopes.PROFILE]
 });
 
@@ -96,6 +96,8 @@ if (response.type === 'success') {
   console.log('User signed in:', response.data.user);
 }
 ```
+
+> **Android Note:** The `androidClientId` must be a **Web application OAuth client ID** (not Android OAuth client), as required by the Android Credential Manager API.
 
 ## 📱 Platform Setup
 
@@ -344,18 +346,22 @@ interface GoogleAuthPluginOptions {
 1. **Configure Client ID (Choose one method):**
 
    **Method A: Automatic Detection from google-services.json (Recommended)**
-   
+
    Add your `google-services.json` file to `android/app/` directory.
 
+   > **Important:** The library will automatically extract the Web client ID (client_type: 3) from your `google-services.json`. This is the correct client ID for Android Credential Manager authentication.
+
    **Method B: Manual Configuration**
-   
-   Provide the client ID directly in your configuration:
+
+   Provide the **Web application** client ID directly in your configuration:
    ```typescript
    await GoogleAuth.configure({
-     androidClientId: 'YOUR_ANDROID_CLIENT_ID.apps.googleusercontent.com',
+     androidClientId: 'YOUR_WEB_CLIENT_ID.apps.googleusercontent.com', // Use Web OAuth client ID, NOT Android client ID
      iosClientId: 'YOUR_IOS_CLIENT_ID.apps.googleusercontent.com'
    });
    ```
+
+   > **Note:** The `androidClientId` should be your **Web application OAuth client ID** (client_type: 3 in google-services.json), not the Android OAuth client ID. The Android OAuth client is used only for linking your SHA-1 certificate to the project.
 
 ## 🔧 Google Cloud Console Setup
 
@@ -387,29 +393,45 @@ interface GoogleAuthPluginOptions {
 6. Copy the **Client ID** (ends with `.apps.googleusercontent.com`)
 
 #### For Android:
+
+**Important:** For Android, you need to create **both** an Android OAuth client AND a Web application OAuth client.
+
+**Step 1: Create Android OAuth Client (for SHA-1 certificate)**
 1. Go to **Credentials** → **Create Credentials** → **OAuth 2.0 Client IDs**
 2. Application type: **Android**
 3. Name: Your app name (Android)
 4. Package name: Your Android app's package name (e.g., `com.yourcompany.yourapp`)
 5. SHA-1 certificate fingerprint:
-   
+
    **For development:**
    ```bash
    keytool -list -v -keystore ~/.android/debug.keystore -alias androiddebugkey -storepass android -keypass android
    ```
-   
+
    **For Expo development builds:**
    ```bash
    eas credentials -p android
    ```
-   
+
    **For production:**
    ```bash
    keytool -list -v -keystore path/to/your/release.keystore -alias your-key-alias
    ```
 
 6. Click **Create**
-7. Copy the **Client ID** (ends with `.apps.googleusercontent.com`)
+
+**Step 2: Create Web Application OAuth Client (Required for Android Authentication)**
+1. Go to **Credentials** → **Create Credentials** → **OAuth 2.0 Client IDs**
+2. Application type: **Web application**
+3. Name: Your app name (Web)
+4. Click **Create**
+5. **Copy this Client ID** - this is what you'll use for `androidClientId` in your configuration
+
+> **Why do I need a Web client ID for Android?**
+>
+> The Android Credential Manager API requires a Web OAuth client ID (client_type: 3) for authentication. This is used to generate ID tokens and authenticate with your backend server. The Android OAuth client (created in Step 1) is only used for associating your app's package name and SHA-1 certificate with your project.
+>
+> When you download `google-services.json`, look for the `oauth_client` entry with `"client_type": 3` - this is the Web client ID you should use in your `androidClientId` configuration.
 
 ### Step 4: Download Configuration Files (Optional but Recommended)
 
@@ -673,8 +695,10 @@ enum GoogleAuthScopes {
 
 **1. "DEVELOPER_ERROR" on Android**
 - Verify your package name matches Google Cloud Console
-- Check SHA-1 fingerprint is correctly added
-- Ensure `google-services.json` is in the correct location
+- Check SHA-1 fingerprint is correctly added to the Android OAuth client
+- Ensure you're using the **Web application OAuth client ID** (client_type: 3), not the Android OAuth client ID
+- Verify `google-services.json` is in the correct location (`android/app/`)
+- If manually configuring, ensure `androidClientId` is set to your Web OAuth client ID
 
 **2. "SIGN_IN_REQUIRED" error**
 - User needs to sign in first
