@@ -4,12 +4,13 @@ import GoogleSignIn
 
 @objc(GoogleAuth)
 class GoogleAuth: NSObject {
-    
+
     @objc static let shared = GoogleAuth()
     private var isConfigured = false
-    
+
     private var configuredScopes: [String] = []
-    
+    private var forceAccountPicker: Bool = false
+
     private override init() {
         super.init()
     }
@@ -44,7 +45,13 @@ class GoogleAuth: NSObject {
             if let scopes = params["scopes"] as? [String] {
                 validateAndStoreScopes(scopes)
             }
-            
+
+            // Store forceAccountPicker preference
+            if let forceAccountPicker = params["forceAccountPicker"] as? Bool {
+                self.forceAccountPicker = forceAccountPicker
+                print("GoogleAuth: forceAccountPicker set to \(forceAccountPicker)")
+            }
+
             isConfigured = true
             print("GoogleAuth: Configuration completed successfully")
         } catch {
@@ -61,13 +68,20 @@ class GoogleAuth: NSObject {
             reject("NOT_CONFIGURED", "GoogleAuth must be configured before signing in", nil)
             return
         }
-        
+
         DispatchQueue.main.async {
             guard let presentingViewController = self.getPresentingViewController() else {
                 reject("NO_VIEW_CONTROLLER", "No presenting view controller found", nil)
                 return
             }
-            
+
+            // If forceAccountPicker is enabled, skip silent sign-in and show account picker directly
+            if self.forceAccountPicker {
+                print("GoogleAuth: forceAccountPicker enabled, skipping silent sign-in")
+                self.performInteractiveSignIn(presentingViewController: presentingViewController, resolve: resolve, reject: reject)
+                return
+            }
+
             // Try silent sign-in first
             GIDSignIn.sharedInstance.restorePreviousSignIn { [weak self] result, error in
                 if let error = error {
@@ -75,7 +89,7 @@ class GoogleAuth: NSObject {
                     self?.performInteractiveSignIn(presentingViewController: presentingViewController, resolve: resolve, reject: reject)
                     return
                 }
-                
+
                 if let user = result {
                     self?.handleSignInSuccess(user: user, resolve: resolve)
                 } else {
