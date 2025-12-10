@@ -4,8 +4,6 @@
 [![npm downloads](https://img.shields.io/npm/d18m/react-native-google-auth.svg)](https://img.shields.io/npm/d18m/react-native-google-auth.svg)
 [![GitHub stars](https://img.shields.io/github/stars/sbaiahmed1/react-native-google-auth.svg)](https://github.com/sbaiahmed1/react-native-google-auth/stargazers)
 
-> ⚠️ **Development Status**: This library is currently in active development. While core functionality is implemented and working, some features may still be under development or subject to change. Please use with caution in production environments.
-
 **react-native-google-auth** is a comprehensive React Native Google Authentication library that provides seamless Google Sign-In integration for iOS and Android applications. Built with modern APIs including Google Sign-In SDK for iOS and Android Credential Manager, this library offers the most up-to-date Google authentication solution for React Native developers.
 
 ## 📋 Table of Contents
@@ -236,7 +234,7 @@ export default function App() {
   const handleGoogleSignIn = async () => {
     try {
       const response = await GoogleAuth.signIn();
-      
+
       if (response.type === 'success') {
         console.log('User signed in:', response.data.user);
         // Handle successful sign-in
@@ -295,7 +293,7 @@ interface GoogleAuthPluginOptions {
 2. **Configure Client ID (Choose one method):**
 
    **Method A: Automatic Detection from Info.plist (Recommended)**
-   
+
    Add your iOS client ID to `ios/YourApp/Info.plist`:
    ```xml
    <key>GIDClientID</key>
@@ -303,7 +301,7 @@ interface GoogleAuthPluginOptions {
    ```
 
    **Method B: Manual Configuration**
-   
+
    Provide the client ID directly in your configuration:
    ```typescript
    await GoogleAuth.configure({
@@ -330,7 +328,7 @@ interface GoogleAuthPluginOptions {
 4. **Configure URL handling in your `AppDelegate.swift`:**
    ```swift
    import GoogleSignIn
-   
+
    // Add this method to handle URL schemes
    func application(
      _ app: UIApplication,
@@ -376,9 +374,9 @@ interface GoogleAuthPluginOptions {
 1. Go to **APIs & Services** → **OAuth consent screen**
 2. Choose **External** (for public apps) or **Internal** (for G Suite domains)
 3. Fill in the required information:
-   - App name
-   - User support email
-   - Developer contact information
+  - App name
+  - User support email
+  - Developer contact information
 4. Add scopes (at minimum: `email`, `profile`, `openid`)
 5. Save and continue
 
@@ -484,7 +482,7 @@ const configure = async () => {
 const signIn = async () => {
   try {
     const response = await GoogleAuth.signIn();
-    
+
     if (response.type === 'success') {
       const { user, idToken, accessToken } = response.data;
       console.log('User:', user);
@@ -567,7 +565,7 @@ const checkTokenExpiration = async () => {
   try {
     const isExpired = await GoogleAuth.isTokenExpired();
     console.log('Token expired:', isExpired);
-    
+
     if (isExpired) {
       // Refresh tokens if expired
       await refreshTokens();
@@ -717,7 +715,7 @@ enum GoogleAuthScopes {
 #### Platform Differences
 
 **Important Note about Access Tokens:**
-- **iOS**: Returns both `idToken` and `accessToken` 
+- **iOS**: Returns both `idToken` and `accessToken`
 - **Android**: Returns `idToken` but `accessToken` is always `null` due to Android Credential Manager API limitations
 
 The Android Credential Manager API focuses on authentication (ID tokens) rather than authorization (access tokens). If you need access tokens on Android for API calls, consider implementing a separate OAuth2 flow or use the ID token for server-side token exchange.
@@ -751,7 +749,7 @@ export default function App() {
         scopes: [GoogleAuthScopes.EMAIL, GoogleAuthScopes.PROFILE]
       });
       setIsConfigured(true);
-      
+
       // Check if user is already signed in
       const currentUser = await GoogleAuth.getCurrentUser();
       setUser(currentUser);
@@ -769,7 +767,7 @@ export default function App() {
 
     try {
       const response = await GoogleAuth.signIn();
-      
+
       if (response.type === 'success') {
         setUser(response.data.user);
         Alert.alert('Success', `Welcome ${response.data.user.name}!`);
@@ -795,29 +793,29 @@ export default function App() {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Google Auth Example</Text>
-      
-      {user ? (
-        <View style={styles.userInfo}>
-          <Text style={styles.userText}>Welcome, {user.name}!</Text>
-          <Text style={styles.userText}>Email: {user.email}</Text>
-          <TouchableOpacity style={styles.button} onPress={handleSignOut}>
-            <Text style={styles.buttonText}>Sign Out</Text>
-          </TouchableOpacity>
-        </View>
-      ) : (
-        <TouchableOpacity 
-          style={[styles.button, !isConfigured && styles.buttonDisabled]} 
-          onPress={handleSignIn}
-          disabled={!isConfigured}
-        >
-          <Text style={styles.buttonText}>
-            {isConfigured ? 'Sign In with Google' : 'Configuring...'}
-          </Text>
-        </TouchableOpacity>
-      )}
-    </View>
-  );
+    <Text style={styles.title}>Google Auth Example</Text>
+
+  {user ? (
+    <View style={styles.userInfo}>
+    <Text style={styles.userText}>Welcome, {user.name}!</Text>
+    <Text style={styles.userText}>Email: {user.email}</Text>
+  <TouchableOpacity style={styles.button} onPress={handleSignOut}>
+  <Text style={styles.buttonText}>Sign Out</Text>
+  </TouchableOpacity>
+  </View>
+  ) : (
+    <TouchableOpacity
+      style={[styles.button, !isConfigured && styles.buttonDisabled]}
+    onPress={handleSignIn}
+    disabled={!isConfigured}
+  >
+    <Text style={styles.buttonText}>
+      {isConfigured ? 'Sign In with Google' : 'Configuring...'}
+      </Text>
+      </TouchableOpacity>
+  )}
+  </View>
+);
 }
 
 const styles = StyleSheet.create({
@@ -878,7 +876,7 @@ const App = () => {
         androidClientId: 'YOUR_ANDROID_CLIENT_ID.apps.googleusercontent.com',
         scopes: [GoogleAuthScopes.EMAIL, GoogleAuthScopes.PROFILE]
       });
-      
+
       // Check if user is already signed in
       const currentUser = await GoogleAuth.getCurrentUser();
       setUser(currentUser);
@@ -910,19 +908,19 @@ const App = () => {
   return (
     <View style={styles.container}>
       {user ? (
-        <View>
-          <Text>Welcome, {user.name}!</Text>
+          <View>
+            <Text>Welcome, {user.name}!</Text>
           <TouchableOpacity style={styles.button} onPress={signOut}>
-            <Text style={styles.buttonText}>Sign Out</Text>
-          </TouchableOpacity>
-        </View>
-      ) : (
-        <TouchableOpacity style={styles.button} onPress={signIn}>
-          <Text style={styles.buttonText}>Sign In with Google</Text>
-        </TouchableOpacity>
-      )}
-    </View>
-  );
+        <Text style={styles.buttonText}>Sign Out</Text>
+      </TouchableOpacity>
+      </View>
+  ) : (
+    <TouchableOpacity style={styles.button} onPress={signIn}>
+  <Text style={styles.buttonText}>Sign In with Google</Text>
+  </TouchableOpacity>
+    )}
+  </View>
+);
 };
 
 const styles = StyleSheet.create({
