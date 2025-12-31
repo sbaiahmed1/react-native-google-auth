@@ -52,7 +52,6 @@ const copyFileWithErrorHandling = (
         fs.mkdirSync(destinationDir, { recursive: true });
       }
       fs.copyFileSync(sourcePath, destinationPath);
-      console.log(`✅ Successfully copied ${fileName} to ${destinationPath}`);
       return true;
     } else {
       console.warn(`⚠️ Source file not found: ${sourcePath}`);
@@ -144,8 +143,6 @@ const getAndroidClientIdFromJson = (
  */
 const withGoogleAuthIOS: ConfigPlugin<Options> = (config, options) => {
   return withInfoPlist(config, (iosConfig) => {
-    console.log('🍎 Configuring iOS for Google Auth...');
-
     // Copy GoogleService-Info.plist to iOS directory
     const { projectRoot } = iosConfig.modRequest;
     const iosGoogleServicesPath = options.iosGoogleServicesFile
@@ -175,11 +172,6 @@ const withGoogleAuthIOS: ConfigPlugin<Options> = (config, options) => {
     }
 
     if (iosClientId) {
-      console.log(
-        '🍎 Using iOS client ID:',
-        iosClientId.substring(0, 20) + '...'
-      );
-
       // Add GIDClientID to Info.plist
       iosConfig.modResults.GIDClientID = iosClientId;
 
@@ -187,19 +179,10 @@ const withGoogleAuthIOS: ConfigPlugin<Options> = (config, options) => {
       const urlScheme = options.iosUrlScheme || iosClientId.split('.')[0];
       if (urlScheme) {
         // Check if URL scheme already exists to prevent duplicates
-        if (hasExistingUrlScheme(iosConfig.modResults, urlScheme)) {
-          console.log(
-            `🍎 URL scheme "${urlScheme}" already exists, skipping...`
-          );
-        } else {
-          console.log(`🍎 Adding URL scheme: ${urlScheme}`);
+        if (!hasExistingUrlScheme(iosConfig.modResults, urlScheme)) {
           iosConfig.modResults = appendScheme(urlScheme, iosConfig.modResults);
         }
       }
-    } else {
-      console.warn(
-        '⚠️ No iOS client ID found. Please provide iosClientId or GoogleService-Info.plist'
-      );
     }
 
     return iosConfig;
@@ -211,8 +194,6 @@ const withGoogleAuthIOS: ConfigPlugin<Options> = (config, options) => {
  */
 const withGoogleAuthAndroid: ConfigPlugin<Options> = (config, options) => {
   return withAndroidManifest(config, (androidConfig) => {
-    console.log('🤖 Configuring Android manifest for Google Auth...');
-
     // Copy google-services.json to Android app directory
     const { projectRoot } = androidConfig.modRequest;
     const androidGoogleServicesPath = options.googleServicesFile
@@ -242,29 +223,15 @@ const withGoogleAuthAndroid: ConfigPlugin<Options> = (config, options) => {
         ) || undefined;
     }
 
-    if (androidClientId) {
-      console.log(
-        '🤖 Using Android client ID:',
-        androidClientId.substring(0, 20) + '...'
-      );
-    } else {
-      console.warn(
-        '⚠️ No Android client ID found. Please provide androidClientId or google-services.json'
-      );
-    }
-
     // Add INTERNET permission if not already present
     const permissions =
       androidConfig.modResults.manifest['uses-permission'] || [];
 
     if (!hasInternetPermission(permissions)) {
-      console.log('🤖 Adding INTERNET permission...');
       permissions.push({
         $: { 'android:name': 'android.permission.INTERNET' },
       });
       androidConfig.modResults.manifest['uses-permission'] = permissions;
-    } else {
-      console.log('🤖 INTERNET permission already exists, skipping...');
     }
 
     return androidConfig;
@@ -291,21 +258,18 @@ const withGoogleAuthWithoutFirebase: ConfigPlugin<Options> = (
  * Add Google Sign-In URL scheme to iOS Info.plist
  */
 export const withGoogleUrlScheme: ConfigPlugin<Options> = (config, options) => {
-  return withInfoPlist(config, (config) => {
+  return withInfoPlist(config, (iosConfig) => {
     const urlScheme =
       options.iosUrlScheme ||
       (options.iosClientId ? options.iosClientId.split('.')[0] : null);
 
     if (urlScheme) {
       // Check if URL scheme already exists to prevent duplicates
-      if (hasExistingUrlScheme(config.modResults, urlScheme)) {
-        console.log(`🍎 URL scheme "${urlScheme}" already exists, skipping...`);
-      } else {
-        console.log(`🍎 Adding URL scheme: ${urlScheme}`);
-        config.modResults = appendScheme(urlScheme, config.modResults);
+      if (!hasExistingUrlScheme(iosConfig.modResults, urlScheme)) {
+        iosConfig.modResults = appendScheme(urlScheme, iosConfig.modResults);
       }
     }
-    return config;
+    return iosConfig;
   });
 };
 
@@ -329,15 +293,9 @@ const withGoogleAuthRoot: ConfigPlugin<Options | void> = (
   config: ExpoConfig,
   options
 ) => {
-  console.log('🚀 Starting React Native Google Auth plugin configuration...');
-
   const result = options
     ? withGoogleAuthWithoutFirebase(config, options)
     : withGoogleAuth(config);
-
-  console.log(
-    '✅ React Native Google Auth plugin configuration completed successfully!'
-  );
 
   return result;
 };
