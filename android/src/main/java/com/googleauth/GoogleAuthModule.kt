@@ -300,7 +300,7 @@ class GoogleAuthModule(reactContext: ReactApplicationContext) :
     }
 
     // No cached tokens, try silent sign-in
-    val activity = currentActivity
+    val activity = reactApplicationContext.currentActivity
     if (activity == null) {
       promise.reject("NO_ACTIVITY", "No current activity available")
       return
@@ -347,7 +347,7 @@ class GoogleAuthModule(reactContext: ReactApplicationContext) :
       return
     }
 
-    val activity = currentActivity
+    val activity = reactApplicationContext.currentActivity
     if (activity == null) {
       promise.reject("NO_ACTIVITY", "No current activity available")
       return
@@ -438,7 +438,7 @@ class GoogleAuthModule(reactContext: ReactApplicationContext) :
       }
       
       if (!isAvailable && showErrorDialog == true) {
-        currentActivity?.let { activity ->
+        reactApplicationContext.currentActivity?.let { activity ->
           if (googleApiAvailability.isUserResolvableError(resultCode)) {
             googleApiAvailability.getErrorDialog(activity, resultCode, 9000)?.show()
           }
@@ -454,7 +454,7 @@ class GoogleAuthModule(reactContext: ReactApplicationContext) :
   // MARK: - Helper Methods
   
   private fun getValidActivity(): Activity? {
-    val activity = currentActivity
+    val activity = reactApplicationContext.currentActivity
     return if (activity != null && !activity.isFinishing && !activity.isDestroyed) {
       activity
     } else {
