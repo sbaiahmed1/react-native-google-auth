@@ -139,6 +139,15 @@ const getAndroidClientIdFromJson = (
 };
 
 /**
+ * Helper function to convert iOS client ID to URL scheme
+ * Reverses the client ID to create the proper URL scheme
+ * e.g., "123456789.apps.googleusercontent.com" -> "com.googleusercontent.apps.123456789"
+ */
+const getUrlSchemeFromClientId = (clientId: string): string => {
+  return clientId.split('.').reverse().join('.');
+};
+
+/**
  * Configure iOS for Google Sign-In
  */
 const withGoogleAuthIOS: ConfigPlugin<Options> = (config, options) => {
@@ -176,9 +185,10 @@ const withGoogleAuthIOS: ConfigPlugin<Options> = (config, options) => {
       iosConfig.modResults.GIDClientID = iosClientId;
 
       // Add URL scheme
-      const urlScheme = options.iosUrlScheme || iosClientId.split('.')[0];
+      const urlScheme =
+        options.iosUrlScheme || getUrlSchemeFromClientId(iosClientId);
       if (urlScheme) {
-        // Check if URL scheme already exists to prevent duplicates
+        // Check if the URL scheme already exists to prevent duplicates
         if (!hasExistingUrlScheme(iosConfig.modResults, urlScheme)) {
           iosConfig.modResults = appendScheme(urlScheme, iosConfig.modResults);
         }
@@ -261,10 +271,12 @@ export const withGoogleUrlScheme: ConfigPlugin<Options> = (config, options) => {
   return withInfoPlist(config, (iosConfig) => {
     const urlScheme =
       options.iosUrlScheme ||
-      (options.iosClientId ? options.iosClientId.split('.')[0] : null);
+      (options.iosClientId
+        ? getUrlSchemeFromClientId(options.iosClientId)
+        : null);
 
     if (urlScheme) {
-      // Check if URL scheme already exists to prevent duplicates
+      // Check if the URL scheme already exists to prevent duplicates
       if (!hasExistingUrlScheme(iosConfig.modResults, urlScheme)) {
         iosConfig.modResults = appendScheme(urlScheme, iosConfig.modResults);
       }
