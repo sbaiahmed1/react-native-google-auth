@@ -118,6 +118,16 @@ export interface ConfigureParams {
    * @platform iOS
    */
   forceAccountPicker?: boolean;
+
+  /**
+   * Android Credential Manager behavior mode
+   * - 'silent': Only show existing authorized accounts, no UI interaction
+   * - 'interactive': Always display the Google account picker UI
+   * - 'auto': Try silent sign-in first, fallback to interactive if needed (default)
+   * Default: 'auto'
+   * @platform Android
+   */
+  credentialManagerMode?: 'silent' | 'interactive' | 'auto';
 }
 
 export interface User {
