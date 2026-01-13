@@ -46,6 +46,7 @@ class GoogleAuthModule(reactContext: ReactApplicationContext) :
   private var androidClientId: String? = null
   private var hostedDomain: String? = null
   private var configuredScopes: List<String>? = null
+  private var credentialManagerMode: String = "auto" // 'silent', 'interactive', or 'auto'
   private var isConfigured = false
   private val coroutineScope = CoroutineScope(Dispatchers.Main)
   
@@ -125,7 +126,16 @@ class GoogleAuthModule(reactContext: ReactApplicationContext) :
       webClientId = params.getString("webClientId")
       androidClientId = params.getString("androidClientId")
       hostedDomain = params.getString("hostedDomain")
-      
+
+      // Extract credential manager mode (default to "auto" if not specified)
+      credentialManagerMode = params.getString("credentialManagerMode") ?: "auto"
+
+      // Validate credential manager mode
+      if (credentialManagerMode !in listOf("silent", "interactive", "auto")) {
+        promise.reject("INVALID_CONFIG", "credentialManagerMode must be 'silent', 'interactive', or 'auto'")
+        return
+      }
+
       // Extract and validate scopes
       val scopesArray = params.getArray("scopes")
       configuredScopes = scopesArray?.let { array ->
@@ -192,18 +202,43 @@ class GoogleAuthModule(reactContext: ReactApplicationContext) :
           return@launch
         }
 
-        // Try silent sign-in first
-        try {
-          val silentResult = performSilentSignIn(activity)
-          withContext(Dispatchers.Main) {
-            promise.resolve(silentResult)
+        when (credentialManagerMode) {
+          "silent" -> {
+            // Silent mode only - no fallback to interactive
+            try {
+              val silentResult = performSilentSignIn(activity)
+              withContext(Dispatchers.Main) {
+                promise.resolve(silentResult)
+              }
+            } catch (e: Exception) {
+              Log.e("GoogleAuth", "Silent sign-in failed: " + (e.localizedMessage ?: "Unknown error"))
+              withContext(Dispatchers.Main) {
+                promise.reject("SIGN_IN_ERROR", "Silent sign-in failed. No saved credentials found or user not previously authorized: " + (e.localizedMessage ?: "Unknown error"), e)
+              }
+            }
           }
-        } catch (e: Exception) {
-          Log.d("GoogleAuth", "Silent sign-in failed, trying interactive: " + (e.localizedMessage ?: "Unknown error"))
-          // If silent fails, try interactive
-          val interactiveResult = performInteractiveSignIn(activity)
-          withContext(Dispatchers.Main) {
-            promise.resolve(interactiveResult)
+          "interactive" -> {
+            // Interactive mode only - always show account picker
+            val interactiveResult = performInteractiveSignIn(activity)
+            withContext(Dispatchers.Main) {
+              promise.resolve(interactiveResult)
+            }
+          }
+          else -> {
+            // Auto mode (default) - try silent first, fallback to interactive
+            try {
+              val silentResult = performSilentSignIn(activity)
+              withContext(Dispatchers.Main) {
+                promise.resolve(silentResult)
+              }
+            } catch (e: Exception) {
+              Log.d("GoogleAuth", "Silent sign-in failed, trying interactive: " + (e.localizedMessage ?: "Unknown error"))
+              // If silent fails, try interactive
+              val interactiveResult = performInteractiveSignIn(activity)
+              withContext(Dispatchers.Main) {
+                promise.resolve(interactiveResult)
+              }
+            }
           }
         }
       } catch (e: Exception) {
