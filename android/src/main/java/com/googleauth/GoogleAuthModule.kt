@@ -32,7 +32,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
-import java.util.Base64
+import android.util.Base64
 
 @ReactModule(name = GoogleAuthModule.NAME)
 class GoogleAuthModule(reactContext: ReactApplicationContext) :
@@ -864,7 +864,7 @@ class GoogleAuthModule(reactContext: ReactApplicationContext) :
     try {
       val parts = idToken.split(".")
       if (parts.size >= 2) {
-        val payload = String(Base64.getUrlDecoder().decode(parts[1]))
+        val payload = String(Base64.decode(parts[1], Base64.NO_WRAP))
         val json = JSONObject(payload)
         val exp = json.optLong("exp", 0)
         if (exp > 0) {
@@ -880,7 +880,7 @@ class GoogleAuthModule(reactContext: ReactApplicationContext) :
     try {
       val parts = idToken.split(".")
       if (parts.size >= 2) {
-        val payload = String(Base64.getUrlDecoder().decode(parts[1]))
+        val payload = String(Base64.decode(parts[1], Base64.NO_WRAP))
         val json = JSONObject(payload)
         return json.optString("email", null)
       }
