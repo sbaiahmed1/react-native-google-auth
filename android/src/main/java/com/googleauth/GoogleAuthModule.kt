@@ -864,7 +864,7 @@ class GoogleAuthModule(reactContext: ReactApplicationContext) :
     try {
       val parts = idToken.split(".")
       if (parts.size >= 2) {
-        val payload = String(Base64.decode(parts[1], Base64.NO_WRAP))
+        val payload = String(Base64.decode(parts[1], Base64.URL_SAFE))
         val json = JSONObject(payload)
         val exp = json.optLong("exp", 0)
         if (exp > 0) {
@@ -880,7 +880,7 @@ class GoogleAuthModule(reactContext: ReactApplicationContext) :
     try {
       val parts = idToken.split(".")
       if (parts.size >= 2) {
-        val payload = String(Base64.decode(parts[1], Base64.NO_WRAP))
+        val payload = String(Base64.decode(parts[1], Base64.URL_SAFE))
         val json = JSONObject(payload)
         return json.optString("email", null)
       }
