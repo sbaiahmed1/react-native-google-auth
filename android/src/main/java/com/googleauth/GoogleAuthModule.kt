@@ -1,7 +1,6 @@
 package com.googleauth
 
 import android.app.Activity
-import android.content.Context
 import android.content.SharedPreferences
 import android.util.Log
 import androidx.lifecycle.Lifecycle
@@ -32,8 +31,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import java.util.Date
-import java.util.concurrent.TimeUnit
 import org.json.JSONObject
 import java.util.Base64
 
