@@ -37,7 +37,8 @@ class GoogleAuth: NSObject {
         
         // Configure Google Sign-In with validation
         do {
-            let configuration = try createGoogleSignInConfiguration(clientId: clientId, hostedDomain: hostedDomain)
+            let webClientId = params["webClientId"] as? String
+            let configuration = try createGoogleSignInConfiguration(clientId: clientId, webClientId: webClientId, hostedDomain: hostedDomain)
             GIDSignIn.sharedInstance.configuration = configuration
             print("GoogleAuth: Successfully configured with client ID: \(maskClientId(clientId))")
             
@@ -343,17 +344,17 @@ class GoogleAuth: NSObject {
         return clientId
     }
     
-    private func createGoogleSignInConfiguration(clientId: String, hostedDomain: String?) throws -> GIDConfiguration {
+    private func createGoogleSignInConfiguration(clientId: String, webClientId: String?, hostedDomain: String?) throws -> GIDConfiguration {
         guard !clientId.isEmpty else {
             throw NSError(domain: "GoogleAuthError", code: 1001, userInfo: [NSLocalizedDescriptionKey: "Client ID cannot be empty"])
         }
-        
+
         let configuration: GIDConfiguration
-        
+
         if let domain = hostedDomain, !domain.isEmpty {
-            configuration = GIDConfiguration(clientID: clientId, serverClientID: nil, hostedDomain: domain, openIDRealm: nil)
+            configuration = GIDConfiguration(clientID: clientId, serverClientID: webClientId, hostedDomain: domain, openIDRealm: nil)
         } else {
-            configuration = GIDConfiguration(clientID: clientId)
+            configuration = GIDConfiguration(clientID: clientId, serverClientID: webClientId)
         }
         
         return configuration
