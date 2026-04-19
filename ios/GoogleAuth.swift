@@ -435,10 +435,17 @@ class GoogleAuth: NSObject {
     }
     
     private func getPresentingViewController() -> UIViewController? {
-        if let scene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
-           let window = scene.windows.first(where: { $0.isKeyWindow }) {
-            return window.rootViewController
+        guard let scene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+              let window = scene.windows.first(where: { $0.isKeyWindow }),
+              var topViewController = window.rootViewController else {
+            return nil
         }
-        return nil
+        
+        // Traverse the presentation hierarchy to find the topmost presented view controller
+        while let presentedViewController = topViewController.presentedViewController {
+            topViewController = presentedViewController
+        }
+        
+        return topViewController
     }
 }
